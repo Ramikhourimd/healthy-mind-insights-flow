@@ -12,6 +12,7 @@ import { FinancialSettings } from "@/types/finance";
 
 const SettingsPage: React.FC = () => {
   const { settings, updateSettings } = useFinance();
+  // Initialize with a properly typed object using type assertion
   const [formData, setFormData] = useState<FinancialSettings>(
     settings as FinancialSettings
   );
