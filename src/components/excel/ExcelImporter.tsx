@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { extractClinicalSessionsFromExcel } from '@/utils/excelParser';
@@ -52,8 +52,18 @@ const ExcelImporter: React.FC<ExcelImporterProps> = ({
   const [isOpen, setIsOpen] = useState(false);
   const [showFormatHelp, setShowFormatHelp] = useState(false);
   const [importError, setImportError] = useState<string | null>(null);
+  const [staffNameLookup, setStaffNameLookup] = useState<Record<string, string>>({});
 
-  // Create staff name to ID mapping
+  // Create reverse staff mapping (name to ID) for debug display
+  useEffect(() => {
+    const lookup: Record<string, string> = {};
+    staffMembers.forEach(staff => {
+      lookup[staff.name] = staff.id;
+    });
+    setStaffNameLookup(lookup);
+  }, [staffMembers]);
+
+  // Create staff ID to name mapping
   const staffMap: Record<string, string> = {};
   staffMembers.forEach((staff) => {
     staffMap[staff.id] = staff.name;
@@ -80,6 +90,8 @@ const ExcelImporter: React.FC<ExcelImporterProps> = ({
     setImportError(null);
     
     try {
+      console.log('Staff map for import:', staffMap);
+      
       const extractedData = await extractClinicalSessionsFromExcel(
         file,
         staffMap,
@@ -237,6 +249,7 @@ const ExcelImporter: React.FC<ExcelImporterProps> = ({
               <ul className="list-disc pl-6 space-y-1 text-sm">
                 <li><strong>מזהה יומן</strong> - UID ייחודי לכל פגישה</li>
                 <li><strong>שם יוצר</strong> - מי יצר את השורה (שמות המטפלים)</li>
+                <li><strong>משאבים</strong> - שמות המטפלים/רופאים</li>
                 <li><strong>סוג מפגש</strong> - סוג השירות (אינטייק, מעקב CM, מעקב פסיכיאטרי וכו')</li>
                 <li><strong>כותרת</strong> - כולל סוג ומזהה-מטופל (למשל HM-MHS-530)</li>
                 <li><strong>תאריך + שעה התחלה/סיום</strong> - תאריכי הפגישות</li>
@@ -248,7 +261,7 @@ const ExcelImporter: React.FC<ExcelImporterProps> = ({
             <div>
               <h3 className="font-medium mb-1">איך המערכת מעבדת את המידע</h3>
               <ul className="list-disc pl-6 space-y-1 text-sm">
-                <li><strong>שם מטפל</strong> - נלקח מעמודת "שם יוצר" ומועבר למזהה המטפל במערכת</li>
+                <li><strong>שם מטפל</strong> - נלקח מעמודת "משאבים" או "שם יוצר" ומועבר למזהה המטפל במערכת</li>
                 <li><strong>סוג מרפאה (Clinic Type)</strong> - מחולץ מהכותרת, לדוגמה: HM-MHS-530 → MHS</li>
                 <li><strong>סוג מפגש (Meeting Type)</strong> - נקבע כ-Intake אם "סוג מפגש" כולל "אינטייק" או "הערכה ראשונית", אחרת FollowUp</li>
                 <li><strong>מצב הגעה (Show Status)</strong> - נקבע כ-NoShow אם "סטטוס" מכיל "המשתתף לא הופיע", אחרת Show</li>
@@ -263,6 +276,20 @@ const ExcelImporter: React.FC<ExcelImporterProps> = ({
                 <li>הכותרת חייבת להכיל את קוד המרפאה בפורמט HM-XXX-123 או MH-XXX-123</li>
                 <li>שדות חובה: שם מטפל, כותרת, סוג מפגש וסטטוס</li>
               </ul>
+            </div>
+            
+            <div className="mt-4">
+              <h3 className="font-medium mb-1">Staff Members in System</h3>
+              <div className="text-xs p-2 bg-gray-50 rounded border max-h-32 overflow-y-auto">
+                <ul className="list-disc pl-4 space-y-1">
+                  {Object.entries(staffNameLookup).map(([name, id]) => (
+                    <li key={id}>{name}</li>
+                  ))}
+                </ul>
+              </div>
+              <p className="text-xs text-muted-foreground mt-1">
+                Staff names in your Excel file should match one of these names.
+              </p>
             </div>
           </div>
           

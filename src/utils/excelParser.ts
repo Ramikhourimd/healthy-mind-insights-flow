@@ -32,10 +32,11 @@ export const extractClinicalSessionsFromExcel = async (
         // Hebrew column mappings based on the provided template
         const hebrewMappings = {
           providerName: ['פרובידר', 'שם מטפל', 'מטפל', 'רופא', 'שם', 'שם יוצר', 'תאריך יצירה / שם יוצר'],
+          resourceName: ['משאבים', 'משאב', 'ספק'], // Add specific column for resources/providers
           fullName: ['כותרת', 'שם מלא', 'לקוח', 'פרטי מטופל'],
           serviceType: ['סוג מפגש', 'סוג שירות', 'סוג פגישה'],
           status: ['סטטוס', 'מצב'],
-          duration: ['משך (דק׳)', 'משך', 'משך בדקות'],
+          duration: ['משך (דק׳)', 'משך', 'משך בדקות', 'משך זמן בדקות'],
           startTime: ['שעת התחלה', 'התחלה', 'תאריך + שעה התחלה'],
           endTime: ['שעת סיום', 'סיום', 'תאריך + שעה סיום']
         };
@@ -45,12 +46,24 @@ export const extractClinicalSessionsFromExcel = async (
         
         // Process each row in the Excel data
         jsonData.forEach((row: any) => {
-          // Find the provider/staff name
+          // Try to find the provider/staff name from different possible columns
           let staffName = '';
-          for (const key of hebrewMappings.providerName) {
+          
+          // First try resource columns which typically have the actual provider name
+          for (const key of hebrewMappings.resourceName) {
             if (row[key]) {
               staffName = String(row[key]).trim();
               break;
+            }
+          }
+          
+          // If not found in resource columns, try other provider name columns
+          if (!staffName) {
+            for (const key of hebrewMappings.providerName) {
+              if (row[key]) {
+                staffName = String(row[key]).trim();
+                break;
+              }
             }
           }
           
@@ -135,9 +148,8 @@ export const extractClinicalSessionsFromExcel = async (
           // Extract clinic type from fullName (format: "MH-MCB-123" or "HM-MHS-530")
           let clinicType: ClinicType = 'MCB'; // Default
           if (fullName && typeof fullName === 'string') {
-            // Look for patterns like "MH-MCB-123" or "HM-MHS-530"
-            // Updated regex to be more flexible
-            const match = fullName.match(/[MH][MH][-_\s]([A-Za-z]+)[-_\s]/i);
+            // More flexible regex to capture clinic code pattern
+            const match = fullName.match(/[MH]{1,2}[-_\s]?([A-Za-z]{2,5})[-_\s]/i);
             if (match && match[1]) {
               clinicType = mapClinicType(match[1]);
             }
@@ -146,9 +158,11 @@ export const extractClinicalSessionsFromExcel = async (
           // Determine meeting type based on serviceType
           let meetingType: MeetingType = 'FollowUp'; // Default
           if (serviceType && typeof serviceType === 'string') {
-            if (serviceType.includes('אינטייק') || 
-                serviceType.includes('הערכה ראשונית') ||
-                serviceType.toLowerCase().includes('intake')) {
+            const serviceTypeLower = serviceType.toLowerCase();
+            if (serviceTypeLower.includes('אינטייק') || 
+                serviceTypeLower.includes('הערכה ראשונית') ||
+                serviceTypeLower.includes('intake') ||
+                serviceTypeLower.includes('ראשוני')) {
               meetingType = 'Intake';
             }
           }
@@ -156,9 +170,11 @@ export const extractClinicalSessionsFromExcel = async (
           // Determine show status
           let showStatus: ShowStatus = 'Show'; // Default
           if (status && typeof status === 'string') {
-            if (status.includes('לא הופיע') || 
-                status.toLowerCase().includes('noshow') ||
-                status.toLowerCase().includes('no show')) {
+            const statusLower = status.toLowerCase();
+            if (statusLower.includes('לא הופיע') || 
+                statusLower.includes('noshow') ||
+                statusLower.includes('no show') ||
+                statusLower.includes('ביטל')) {
               showStatus = 'NoShow';
             }
           }
@@ -227,6 +243,13 @@ const createStaffNameToIdMap = (staffMap: Record<string, string>): Record<string
         nameToIdMap[normalizedLastName] = id;
       }
     }
+    
+    // Add with/without prefixes like ד"ר
+    if (name.includes('ד"ר') || name.includes('דר ') || name.includes('ד\'ר') || name.includes('דוקטור')) {
+      const nameWithoutPrefix = name.replace(/^(ד"ר|דר |ד'ר|דוקטור)\s+/i, '');
+      const normalizedNameWithoutPrefix = normalizeString(nameWithoutPrefix);
+      nameToIdMap[normalizedNameWithoutPrefix] = id;
+    }
   }
   
   return nameToIdMap;
@@ -234,7 +257,11 @@ const createStaffNameToIdMap = (staffMap: Record<string, string>): Record<string
 
 // Normalize string for better matching
 const normalizeString = (str: string): string => {
-  return str.toLowerCase().trim().replace(/\s+/g, ' ');
+  return str.toLowerCase()
+    .trim()
+    .replace(/\s+/g, ' ')
+    .replace(/["']/g, '') // Remove quotes
+    .replace(/[״"]/g, ''); // Remove Hebrew quotes
 };
 
 // Helper to find staff ID by name with improved fuzzy matching
@@ -245,47 +272,75 @@ const findStaffIdByName = (
 ): string => {
   if (!name) return '';
   
-  const normalizedName = normalizeString(name);
+  // First clean the name - remove quotes, normalize spaces
+  const cleanName = name.replace(/["'״"]/g, '').trim();
   
-  // First, check exact match in the normalized name-to-id map
+  // Normalize the name for consistent comparison
+  const normalizedName = normalizeString(cleanName);
+  
+  // Handle common prefixes by trying both with and without prefixes
+  const nameWithoutPrefix = normalizedName.replace(/^(ד"ר|דר |ד'ר|דוקטור)\s+/i, '');
+  
+  // 1. First, check exact match in the normalized name-to-id map
   if (nameToIdMap[normalizedName]) {
     return nameToIdMap[normalizedName];
   }
   
-  // Then, check for exact match in the original staff map
+  // 2. Try without prefix 
+  if (nameToIdMap[nameWithoutPrefix]) {
+    return nameToIdMap[nameWithoutPrefix];
+  }
+  
+  // 3. Check for exact match in the original staff map
   for (const [id, staffName] of Object.entries(staffMap)) {
     if (normalizeString(staffName) === normalizedName) {
       return id;
     }
-  }
-  
-  // Check if the provided name contains or is contained by any staff name
-  for (const [id, staffName] of Object.entries(staffMap)) {
-    if (normalizeString(staffName).includes(normalizedName) || 
-        normalizedName.includes(normalizeString(staffName))) {
+    
+    // Try matching without prefix
+    if (normalizeString(staffName) === nameWithoutPrefix) {
       return id;
     }
   }
   
-  // Try finding first name match
-  const firstName = normalizedName.split(' ')[0];
+  // 4. Check if the provided name contains or is contained by any staff name
   for (const [id, staffName] of Object.entries(staffMap)) {
-    const staffFirstName = normalizeString(staffName).split(' ')[0];
-    if (staffFirstName === firstName) {
+    const normalizedStaffName = normalizeString(staffName);
+    if (normalizedStaffName.includes(nameWithoutPrefix) || 
+        nameWithoutPrefix.includes(normalizedStaffName)) {
       return id;
     }
   }
   
-  // Last attempt: check if any part of the name matches
-  const nameParts = normalizedName.split(' ');
+  // 5. Try finding last name match (often doctors are referred to by last name)
+  const nameParts = nameWithoutPrefix.split(' ');
+  if (nameParts.length > 0) {
+    const lastName = nameParts[nameParts.length - 1];
+    if (lastName.length > 2) { // Only consider substantive last names
+      for (const [id, staffName] of Object.entries(staffMap)) {
+        const staffNameParts = normalizeString(staffName).split(' ');
+        const staffLastName = staffNameParts[staffNameParts.length - 1];
+        if (lastName === staffLastName) {
+          return id;
+        }
+      }
+    }
+  }
+  
+  // 6. Last attempt: check if any part of the name matches
   for (const [id, staffName] of Object.entries(staffMap)) {
     const staffParts = normalizeString(staffName).split(' ');
     for (const part of nameParts) {
-      if (part.length > 2 && staffParts.some(staffPart => staffPart.includes(part) || part.includes(staffPart))) {
+      if (part.length > 2 && staffParts.some(staffPart => 
+        staffPart.includes(part) || part.includes(staffPart))) {
         return id;
       }
     }
   }
+  
+  // 7. Debug log to help identify missing matches
+  console.error(`No staff match found for: "${name}" (normalized: "${normalizedName}", without prefix: "${nameWithoutPrefix}")`);
+  console.error(`Available staff: ${JSON.stringify(staffMap)}`);
   
   return '';
 };
