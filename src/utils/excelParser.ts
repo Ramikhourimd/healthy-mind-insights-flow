@@ -24,15 +24,15 @@ export const extractClinicalSessionsFromExcel = async (
         // Convert to JSON
         const jsonData = XLSX.utils.sheet_to_json(worksheet);
 
-        console.log('Extracted Excel data:', jsonData);
+        console.log('Extracted raw Excel data:', jsonData);
 
         // Map the Excel data to our clinical session format
         const sessions: Omit<ClinicalSession, "id">[] = [];
         
-        // Hebrew column mappings (with possible variations)
+        // Hebrew column mappings based on the provided template
         const hebrewMappings = {
-          providerName: ['פרובידר', 'שם מטפל', 'מטפל', 'רופא', 'שם'],
-          fullName: ['כותרת', 'שם מלא', 'לקוח'],
+          providerName: ['פרובידר', 'שם מטפל', 'מטפל', 'רופא', 'שם', 'שם יוצר'],
+          fullName: ['כותרת', 'שם מלא', 'לקוח', 'פרטי מטופל'],
           serviceType: ['סוג מפגש', 'סוג שירות', 'סוג פגישה'],
           status: ['סטטוס', 'מצב'],
           duration: ['משך (דק׳)', 'משך', 'משך בדקות'],
@@ -118,10 +118,11 @@ export const extractClinicalSessionsFromExcel = async (
             }
           }
           
-          // Extract clinic type from fullName (format: "MH-MCB-123")
+          // Extract clinic type from fullName (format: "MH-MCB-123" or "HM-MHS-530")
           let clinicType: ClinicType = 'MCB'; // Default
           if (fullName && typeof fullName === 'string') {
-            const match = fullName.match(/MH[-_]([A-Za-z]+)[-_]/);
+            // Look for pattern like "MH-MCB-123" or "HM-MHS-530"
+            const match = fullName.match(/[MH][MH][-_]([A-Za-z]+)[-_]/);
             if (match && match[1]) {
               clinicType = mapClinicType(match[1]);
             }
@@ -158,7 +159,7 @@ export const extractClinicalSessionsFromExcel = async (
               month: currentMonth,
               year: currentYear
             });
-          } else if (staffName) {
+          } else {
             // Log if we have a staff name but couldn't find the ID
             console.warn(`Could not find staff ID for name: ${staffName}`);
           }
@@ -168,6 +169,11 @@ export const extractClinicalSessionsFromExcel = async (
         const aggregatedSessions = aggregateSessions(sessions);
         
         console.log('Mapped and aggregated sessions:', aggregatedSessions);
+        
+        if (aggregatedSessions.length === 0) {
+          console.warn('No sessions were found after mapping and aggregation. Check column names and staff mapping.');
+        }
+        
         resolve(aggregatedSessions);
       } catch (error) {
         console.error('Error parsing Excel file:', error);

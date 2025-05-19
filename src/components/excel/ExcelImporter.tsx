@@ -205,32 +205,41 @@ const ExcelImporter: React.FC<ExcelImporterProps> = ({
           <DialogHeader>
             <DialogTitle>Excel File Format Guidelines</DialogTitle>
             <DialogDescription>
-              The Excel importer supports files with Hebrew column headers and can extract data from various column formats.
+              The Excel importer supports files with Hebrew column headers, typically exported from scheduling systems.
             </DialogDescription>
           </DialogHeader>
           
           <div className="space-y-4 max-h-96 overflow-y-auto">
             <div>
-              <h3 className="font-medium mb-1">Supported Columns (Hebrew)</h3>
+              <h3 className="font-medium mb-1">Expected Columns (Hebrew)</h3>
               <ul className="list-disc pl-6 space-y-1 text-sm">
-                <li><strong>שם מטפל/פרובידר/רופא</strong> - שם המטפל (יועבר אוטומטית למזהה מטפל במערכת)</li>
-                <li><strong>כותרת/שם מלא</strong> - צריך להכיל קוד מרפאה (למשל MH-MCB-123)</li>
-                <li><strong>סוג מפגש/סוג שירות</strong> - סוג הטיפול, אם מכיל "אינטייק" או "הערכה ראשונית" יסווג כ-Intake</li>
-                <li><strong>סטטוס/מצב</strong> - אם מכיל "המשתתף לא הופיע" יסווג כ-NoShow</li>
-                <li><strong>משך (דק׳)/משך</strong> - משך הפגישה בדקות</li>
-                <li><strong>שעת התחלה/סיום</strong> - אם משך לא נמסר, יחושב מהפרש השעות</li>
+                <li><strong>מזהה יומן</strong> - UID ייחודי לכל פגישה</li>
+                <li><strong>שם יוצר</strong> - מי יצר את השורה (שמות המטפלים)</li>
+                <li><strong>סוג מפגש</strong> - סוג השירות (אינטייק, מעקב CM, מעקב פסיכיאטרי וכו')</li>
+                <li><strong>כותרת</strong> - כולל סוג ומזהה-מטופל (למשל HM-MHS-530)</li>
+                <li><strong>תאריך + שעה התחלה/סיום</strong> - תאריכי הפגישות</li>
+                <li><strong>משך (דק׳)</strong> - משך הפגישה בדקות</li>
+                <li><strong>סטטוס</strong> - מצב הפגישה, כולל "המשתתף לא הופיע" לפגישות שלא התקיימו</li>
               </ul>
             </div>
             
             <div>
-              <h3 className="font-medium mb-1">מידע שהמערכת מחלצת</h3>
+              <h3 className="font-medium mb-1">איך המערכת מעבדת את המידע</h3>
               <ul className="list-disc pl-6 space-y-1 text-sm">
-                <li><strong>מטפל</strong> - מזהה את המטפל לפי שם</li>
-                <li><strong>סוג מרפאה (Clinic Type)</strong> - מחולץ מכותרת/שם מלא (MH-XXX-123) כאשר XXX הוא סוג המרפאה</li>
-                <li><strong>סוג מפגש (Meeting Type)</strong> - Intake או FollowUp לפי תיאור השירות</li>
-                <li><strong>סטטוס הגעה (Show Status)</strong> - Show או NoShow לפי סטטוס</li>
-                <li><strong>כמות</strong> - מספר המפגשים (ברירת מחדל: 1)</li>
-                <li><strong>משך</strong> - משך המפגש בדקות</li>
+                <li><strong>שם מטפל</strong> - נלקח מעמודת "שם יוצר" ומועבר למזהה המטפל במערכת</li>
+                <li><strong>סוג מרפאה (Clinic Type)</strong> - מחולץ מהכותרת, לדוגמה: HM-MHS-530 → MHS</li>
+                <li><strong>סוג מפגש (Meeting Type)</strong> - נקבע כ-Intake אם "סוג מפגש" כולל "אינטייק" או "הערכה ראשונית", אחרת FollowUp</li>
+                <li><strong>מצב הגעה (Show Status)</strong> - נקבע כ-NoShow אם "סטטוס" מכיל "המשתתף לא הופיע", אחרת Show</li>
+                <li><strong>משך</strong> - נלקח מעמודת "משך (דק׳)" או מחושב מזמני התחלה וסיום</li>
+              </ul>
+            </div>
+            
+            <div className="p-3 bg-amber-50 border border-amber-200 rounded-md">
+              <h3 className="font-medium text-amber-800 mb-1">חשוב לדעת</h3>
+              <ul className="list-disc pl-6 text-sm text-amber-800">
+                <li>וודא ששמות המטפלים בקובץ האקסל תואמים לשמות המטפלים במערכת</li>
+                <li>הכותרת חייבת להכיל את קוד המרפאה בפורמט HM-XXX-123 או MH-XXX-123</li>
+                <li>שדות חובה: שם מטפל, כותרת, סוג מפגש וסטטוס</li>
               </ul>
             </div>
           </div>
