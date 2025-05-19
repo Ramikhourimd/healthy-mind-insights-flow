@@ -24,7 +24,13 @@ import {
   DialogDescription
 } from "@/components/ui/dialog";
 import { useToast } from '@/components/ui/use-toast';
-import { Bot, Upload, FileSpreadsheet } from 'lucide-react';
+import { Bot, Upload, FileSpreadsheet, Info } from 'lucide-react';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 interface ExcelImporterProps {
   staffMembers: StaffMember[];
@@ -43,6 +49,7 @@ const ExcelImporter: React.FC<ExcelImporterProps> = ({
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const [extractedSessions, setExtractedSessions] = useState<Omit<ClinicalSession, "id">[]>([]);
   const [isOpen, setIsOpen] = useState(false);
+  const [showFormatHelp, setShowFormatHelp] = useState(false);
 
   // Create staff name to ID mapping
   const staffMap: Record<string, string> = {};
@@ -83,7 +90,7 @@ const ExcelImporter: React.FC<ExcelImporterProps> = ({
       } else {
         toast({
           title: "No valid data found",
-          description: "Couldn't find any valid clinical sessions in the Excel file",
+          description: "Couldn't find any valid clinical sessions in the Excel file. Check staff names match your system.",
           variant: "destructive"
         });
       }
@@ -128,7 +135,25 @@ const ExcelImporter: React.FC<ExcelImporterProps> = ({
       <Dialog open={isOpen} onOpenChange={setIsOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Import Clinical Sessions from Excel</DialogTitle>
+            <DialogTitle className="flex items-center justify-between">
+              Import Clinical Sessions from Excel
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button 
+                      variant="ghost" 
+                      size="icon" 
+                      onClick={() => setShowFormatHelp(true)}
+                    >
+                      <Info className="h-4 w-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    View file format guidelines
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </DialogTitle>
             <DialogDescription>
               Upload an Excel file with your clinical sessions data and our AI will extract the relevant information.
             </DialogDescription>
@@ -174,9 +199,53 @@ const ExcelImporter: React.FC<ExcelImporterProps> = ({
         </DialogContent>
       </Dialog>
 
+      {/* Help dialog for file format */}
+      <Dialog open={showFormatHelp} onOpenChange={setShowFormatHelp}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Excel File Format Guidelines</DialogTitle>
+            <DialogDescription>
+              The Excel importer supports files with Hebrew column headers and can extract data from various column formats.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4 max-h-96 overflow-y-auto">
+            <div>
+              <h3 className="font-medium mb-1">Supported Columns (Hebrew)</h3>
+              <ul className="list-disc pl-6 space-y-1 text-sm">
+                <li><strong>שם מטפל/פרובידר/רופא</strong> - שם המטפל (יועבר אוטומטית למזהה מטפל במערכת)</li>
+                <li><strong>כותרת/שם מלא</strong> - צריך להכיל קוד מרפאה (למשל MH-MCB-123)</li>
+                <li><strong>סוג מפגש/סוג שירות</strong> - סוג הטיפול, אם מכיל "אינטייק" או "הערכה ראשונית" יסווג כ-Intake</li>
+                <li><strong>סטטוס/מצב</strong> - אם מכיל "המשתתף לא הופיע" יסווג כ-NoShow</li>
+                <li><strong>משך (דק׳)/משך</strong> - משך הפגישה בדקות</li>
+                <li><strong>שעת התחלה/סיום</strong> - אם משך לא נמסר, יחושב מהפרש השעות</li>
+              </ul>
+            </div>
+            
+            <div>
+              <h3 className="font-medium mb-1">מידע שהמערכת מחלצת</h3>
+              <ul className="list-disc pl-6 space-y-1 text-sm">
+                <li><strong>מטפל</strong> - מזהה את המטפל לפי שם</li>
+                <li><strong>סוג מרפאה (Clinic Type)</strong> - מחולץ מכותרת/שם מלא (MH-XXX-123) כאשר XXX הוא סוג המרפאה</li>
+                <li><strong>סוג מפגש (Meeting Type)</strong> - Intake או FollowUp לפי תיאור השירות</li>
+                <li><strong>סטטוס הגעה (Show Status)</strong> - Show או NoShow לפי סטטוס</li>
+                <li><strong>כמות</strong> - מספר המפגשים (ברירת מחדל: 1)</li>
+                <li><strong>משך</strong> - משך המפגש בדקות</li>
+              </ul>
+            </div>
+          </div>
+          
+          <DialogFooter>
+            <Button onClick={() => setShowFormatHelp(false)}>
+              הבנתי
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* Confirmation dialog */}
       <Dialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog}>
-        <DialogContent>
+        <DialogContent className="sm:max-w-3xl">
           <DialogHeader>
             <DialogTitle>Confirm Import</DialogTitle>
             <DialogDescription>
