@@ -1,3 +1,4 @@
+
 import type { Config } from "tailwindcss";
 
 export default {
@@ -61,6 +62,19 @@ export default {
 					'accent-foreground': 'hsl(var(--sidebar-accent-foreground))',
 					border: 'hsl(var(--sidebar-border))',
 					ring: 'hsl(var(--sidebar-ring))'
+				},
+				// Custom colors for the clinic dashboard
+				clinic: {
+					blue: '#3B82F6',
+					darkblue: '#1E40AF',
+					green: '#10B981',
+					red: '#EF4444',
+					yellow: '#F59E0B',
+					purple: '#8B5CF6',
+					lightblue: '#93C5FD',
+					teal: '#14B8A6',
+					gray: '#6B7280',
+					lightgray: '#F3F4F6',
 				}
 			},
 			borderRadius: {
