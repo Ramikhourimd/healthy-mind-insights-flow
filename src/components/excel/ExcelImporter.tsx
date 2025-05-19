@@ -31,6 +31,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 interface ExcelImporterProps {
   staffMembers: StaffMember[];
@@ -50,6 +51,7 @@ const ExcelImporter: React.FC<ExcelImporterProps> = ({
   const [extractedSessions, setExtractedSessions] = useState<Omit<ClinicalSession, "id">[]>([]);
   const [isOpen, setIsOpen] = useState(false);
   const [showFormatHelp, setShowFormatHelp] = useState(false);
+  const [importError, setImportError] = useState<string | null>(null);
 
   // Create staff name to ID mapping
   const staffMap: Record<string, string> = {};
@@ -60,6 +62,7 @@ const ExcelImporter: React.FC<ExcelImporterProps> = ({
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
       setFile(e.target.files[0]);
+      setImportError(null);
     }
   };
 
@@ -74,6 +77,7 @@ const ExcelImporter: React.FC<ExcelImporterProps> = ({
     }
 
     setIsUploading(true);
+    setImportError(null);
     
     try {
       const extractedData = await extractClinicalSessionsFromExcel(
@@ -88,6 +92,7 @@ const ExcelImporter: React.FC<ExcelImporterProps> = ({
       if (extractedData.length > 0) {
         setShowConfirmDialog(true);
       } else {
+        setImportError("No valid sessions could be extracted. Please make sure staff names in the Excel file match those in the system.");
         toast({
           title: "No valid data found",
           description: "Couldn't find any valid clinical sessions in the Excel file. Check staff names match your system.",
@@ -96,6 +101,7 @@ const ExcelImporter: React.FC<ExcelImporterProps> = ({
       }
     } catch (error) {
       console.error('Error processing file:', error);
+      setImportError("An error occurred while processing the file. Please check the file format and try again.");
       toast({
         title: "Error processing file",
         description: "An error occurred while trying to process the Excel file",
@@ -122,6 +128,15 @@ const ExcelImporter: React.FC<ExcelImporterProps> = ({
     return staff ? staff.name : "Unknown Staff";
   };
 
+  // Reset state when dialog is closed
+  const handleDialogClose = (open: boolean) => {
+    if (!open) {
+      setFile(null);
+      setImportError(null);
+    }
+    setIsOpen(open);
+  };
+
   return (
     <>
       <Button 
@@ -132,7 +147,7 @@ const ExcelImporter: React.FC<ExcelImporterProps> = ({
         <span>AI Excel Import</span>
       </Button>
 
-      <Dialog open={isOpen} onOpenChange={setIsOpen}>
+      <Dialog open={isOpen} onOpenChange={handleDialogClose}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center justify-between">
@@ -158,6 +173,13 @@ const ExcelImporter: React.FC<ExcelImporterProps> = ({
               Upload an Excel file with your clinical sessions data and our AI will extract the relevant information.
             </DialogDescription>
           </DialogHeader>
+
+          {importError && (
+            <Alert variant="destructive" className="mb-4">
+              <AlertTitle>Import Error</AlertTitle>
+              <AlertDescription>{importError}</AlertDescription>
+            </Alert>
+          )}
 
           <Card className="border-dashed border-2 border-primary/50">
             <CardContent className="pt-6 pb-4 text-center">

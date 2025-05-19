@@ -31,7 +31,7 @@ export const extractClinicalSessionsFromExcel = async (
         
         // Hebrew column mappings based on the provided template
         const hebrewMappings = {
-          providerName: ['פרובידר', 'שם מטפל', 'מטפל', 'רופא', 'שם', 'שם יוצר'],
+          providerName: ['פרובידר', 'שם מטפל', 'מטפל', 'רופא', 'שם', 'שם יוצר', 'תאריך יצירה / שם יוצר'],
           fullName: ['כותרת', 'שם מלא', 'לקוח', 'פרטי מטופל'],
           serviceType: ['סוג מפגש', 'סוג שירות', 'סוג פגישה'],
           status: ['סטטוס', 'מצב'],
@@ -40,25 +40,39 @@ export const extractClinicalSessionsFromExcel = async (
           endTime: ['שעת סיום', 'סיום', 'תאריך + שעה סיום']
         };
         
+        // Create a reverse map of staff names to IDs for easier lookup
+        const staffNameToIdMap = createStaffNameToIdMap(staffMap);
+        
         // Process each row in the Excel data
         jsonData.forEach((row: any) => {
           // Find the provider/staff name
           let staffName = '';
           for (const key of hebrewMappings.providerName) {
             if (row[key]) {
-              staffName = row[key];
+              staffName = String(row[key]).trim();
               break;
             }
           }
           
-          // Find staff ID from name
-          const staffId = findStaffIdByName(staffName, staffMap);
+          // Skip rows where provider/staff name is empty
+          if (!staffName) {
+            console.log('Skipping row with no provider/staff name:', row);
+            return; // Skip this iteration
+          }
+          
+          // Find staff ID from name using improved matching
+          const staffId = findStaffIdByName(staffName, staffMap, staffNameToIdMap);
+          
+          if (!staffId) {
+            console.warn(`Could not find staff ID for name: ${staffName}`);
+            return; // Skip this iteration
+          }
           
           // Find service type
           let serviceType = '';
           for (const key of hebrewMappings.serviceType) {
             if (row[key]) {
-              serviceType = row[key];
+              serviceType = String(row[key]).trim();
               break;
             }
           }
@@ -67,7 +81,7 @@ export const extractClinicalSessionsFromExcel = async (
           let status = '';
           for (const key of hebrewMappings.status) {
             if (row[key]) {
-              status = row[key];
+              status = String(row[key]).trim();
               break;
             }
           }
@@ -76,7 +90,7 @@ export const extractClinicalSessionsFromExcel = async (
           let fullName = '';
           for (const key of hebrewMappings.fullName) {
             if (row[key]) {
-              fullName = row[key];
+              fullName = String(row[key]).trim();
               break;
             }
           }
@@ -121,8 +135,9 @@ export const extractClinicalSessionsFromExcel = async (
           // Extract clinic type from fullName (format: "MH-MCB-123" or "HM-MHS-530")
           let clinicType: ClinicType = 'MCB'; // Default
           if (fullName && typeof fullName === 'string') {
-            // Look for pattern like "MH-MCB-123" or "HM-MHS-530"
-            const match = fullName.match(/[MH][MH][-_]([A-Za-z]+)[-_]/);
+            // Look for patterns like "MH-MCB-123" or "HM-MHS-530"
+            // Updated regex to be more flexible
+            const match = fullName.match(/[MH][MH][-_\s]([A-Za-z]+)[-_\s]/i);
             if (match && match[1]) {
               clinicType = mapClinicType(match[1]);
             }
@@ -131,7 +146,9 @@ export const extractClinicalSessionsFromExcel = async (
           // Determine meeting type based on serviceType
           let meetingType: MeetingType = 'FollowUp'; // Default
           if (serviceType && typeof serviceType === 'string') {
-            if (serviceType.includes('אינטייק') || serviceType.includes('הערכה ראשונית')) {
+            if (serviceType.includes('אינטייק') || 
+                serviceType.includes('הערכה ראשונית') ||
+                serviceType.toLowerCase().includes('intake')) {
               meetingType = 'Intake';
             }
           }
@@ -139,7 +156,9 @@ export const extractClinicalSessionsFromExcel = async (
           // Determine show status
           let showStatus: ShowStatus = 'Show'; // Default
           if (status && typeof status === 'string') {
-            if (status === 'המשתתף לא הופיע') {
+            if (status.includes('לא הופיע') || 
+                status.toLowerCase().includes('noshow') ||
+                status.toLowerCase().includes('no show')) {
               showStatus = 'NoShow';
             }
           }
@@ -147,22 +166,16 @@ export const extractClinicalSessionsFromExcel = async (
           // Count is always 1 for individual sessions
           const count = 1;
           
-          // Only add if we have a valid staff ID
-          if (staffId) {
-            sessions.push({
-              staffId,
-              clinicType: clinicType as ClinicType,
-              meetingType: meetingType as MeetingType,
-              showStatus: showStatus as ShowStatus,
-              count: count,
-              duration: duration,
-              month: currentMonth,
-              year: currentYear
-            });
-          } else {
-            // Log if we have a staff name but couldn't find the ID
-            console.warn(`Could not find staff ID for name: ${staffName}`);
-          }
+          sessions.push({
+            staffId,
+            clinicType: clinicType as ClinicType,
+            meetingType: meetingType as MeetingType,
+            showStatus: showStatus as ShowStatus,
+            count: count,
+            duration: duration,
+            month: currentMonth,
+            year: currentYear
+          });
         });
         
         // Aggregate sessions with the same properties
@@ -189,6 +202,94 @@ export const extractClinicalSessionsFromExcel = async (
   });
 };
 
+// Create a map of normalized staff names to IDs for fuzzy matching
+const createStaffNameToIdMap = (staffMap: Record<string, string>): Record<string, string> => {
+  const nameToIdMap: Record<string, string> = {};
+  
+  for (const [id, name] of Object.entries(staffMap)) {
+    // Add the full name
+    const normalizedName = normalizeString(name);
+    nameToIdMap[normalizedName] = id;
+    
+    // Add first name only
+    const firstName = name.split(' ')[0];
+    const normalizedFirstName = normalizeString(firstName);
+    if (!nameToIdMap[normalizedFirstName]) {
+      nameToIdMap[normalizedFirstName] = id;
+    }
+    
+    // Add last name only
+    const nameParts = name.split(' ');
+    if (nameParts.length > 1) {
+      const lastName = nameParts[nameParts.length - 1];
+      const normalizedLastName = normalizeString(lastName);
+      if (!nameToIdMap[normalizedLastName]) {
+        nameToIdMap[normalizedLastName] = id;
+      }
+    }
+  }
+  
+  return nameToIdMap;
+};
+
+// Normalize string for better matching
+const normalizeString = (str: string): string => {
+  return str.toLowerCase().trim().replace(/\s+/g, ' ');
+};
+
+// Helper to find staff ID by name with improved fuzzy matching
+const findStaffIdByName = (
+  name: string, 
+  staffMap: Record<string, string>,
+  nameToIdMap: Record<string, string>
+): string => {
+  if (!name) return '';
+  
+  const normalizedName = normalizeString(name);
+  
+  // First, check exact match in the normalized name-to-id map
+  if (nameToIdMap[normalizedName]) {
+    return nameToIdMap[normalizedName];
+  }
+  
+  // Then, check for exact match in the original staff map
+  for (const [id, staffName] of Object.entries(staffMap)) {
+    if (normalizeString(staffName) === normalizedName) {
+      return id;
+    }
+  }
+  
+  // Check if the provided name contains or is contained by any staff name
+  for (const [id, staffName] of Object.entries(staffMap)) {
+    if (normalizeString(staffName).includes(normalizedName) || 
+        normalizedName.includes(normalizeString(staffName))) {
+      return id;
+    }
+  }
+  
+  // Try finding first name match
+  const firstName = normalizedName.split(' ')[0];
+  for (const [id, staffName] of Object.entries(staffMap)) {
+    const staffFirstName = normalizeString(staffName).split(' ')[0];
+    if (staffFirstName === firstName) {
+      return id;
+    }
+  }
+  
+  // Last attempt: check if any part of the name matches
+  const nameParts = normalizedName.split(' ');
+  for (const [id, staffName] of Object.entries(staffMap)) {
+    const staffParts = normalizeString(staffName).split(' ');
+    for (const part of nameParts) {
+      if (part.length > 2 && staffParts.some(staffPart => staffPart.includes(part) || part.includes(staffPart))) {
+        return id;
+      }
+    }
+  }
+  
+  return '';
+};
+
 // Aggregate sessions with the same properties (staff, clinic, type, status)
 const aggregateSessions = (sessions: Omit<ClinicalSession, "id">[]) => {
   const aggregated: Omit<ClinicalSession, "id">[] = [];
@@ -210,28 +311,6 @@ const aggregateSessions = (sessions: Omit<ClinicalSession, "id">[]) => {
   });
   
   return aggregated;
-};
-
-// Helper to find staff ID by name
-const findStaffIdByName = (name: string, staffMap: Record<string, string>): string => {
-  if (!name) return '';
-  
-  // First, check exact match
-  for (const [id, staffName] of Object.entries(staffMap)) {
-    if (staffName.toLowerCase() === name.toLowerCase()) {
-      return id;
-    }
-  }
-  
-  // Then, check partial match
-  for (const [id, staffName] of Object.entries(staffMap)) {
-    if (staffName.toLowerCase().includes(name.toLowerCase()) || 
-        name.toLowerCase().includes(staffName.toLowerCase())) {
-      return id;
-    }
-  }
-  
-  return '';
 };
 
 // Map various clinic abbreviations/names to our standard types
