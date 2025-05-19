@@ -42,10 +42,13 @@ export type ClinicalStaffWork = {
 export type ClinicalStaffRates = {
   id: string;
   staffId: string;
-  perSessionRate: number;
-  noShowCompRate: number;
+  intakeSessionRate: number;
+  followUpSessionRate: number;
+  noShowIntakeRate: number;
+  noShowFollowUpRate: number;
   availabilityRetainerRate: number;
-  adminTrainingRate: number;
+  adminRate: number;
+  trainingRate: number;
   effectiveDate: string;
 };
 

@@ -5,7 +5,7 @@ import { useFinance } from "@/context/FinanceContext";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Form, FormControl, FormField, FormItem, FormLabel } from "@/components/ui/form";
 import { useForm } from "react-hook-form";
@@ -24,10 +24,13 @@ type StaffFormValues = {
 // Staff rates form type
 type StaffRatesFormValues = {
   staffId: string;
-  perSessionRate: number;
-  noShowCompRate: number;
+  intakeSessionRate: number;
+  followUpSessionRate: number;
+  noShowIntakeRate: number;
+  noShowFollowUpRate: number;
   availabilityRetainerRate: number;
-  adminTrainingRate: number;
+  adminRate: number;
+  trainingRate: number;
 };
 
 const StaffPage: React.FC = () => {
@@ -70,10 +73,13 @@ const StaffPage: React.FC = () => {
   const ratesForm = useForm<StaffRatesFormValues>({
     defaultValues: {
       staffId: "",
-      perSessionRate: 0,
-      noShowCompRate: 0,
+      intakeSessionRate: 0,
+      followUpSessionRate: 0,
+      noShowIntakeRate: 0,
+      noShowFollowUpRate: 0,
       availabilityRetainerRate: 0,
-      adminTrainingRate: 0
+      adminRate: 0,
+      trainingRate: 0
     }
   });
 
@@ -108,10 +114,13 @@ const StaffPage: React.FC = () => {
     // In a real implementation, we would fetch the rates from the context
     const staffRates = {
       staffId: staff.id,
-      perSessionRate: 500, // Default values, would be loaded from context
-      noShowCompRate: 200,
+      intakeSessionRate: 600, // Default values, would be loaded from context
+      followUpSessionRate: 450,
+      noShowIntakeRate: 300,
+      noShowFollowUpRate: 200,
       availabilityRetainerRate: 150,
-      adminTrainingRate: 250
+      adminRate: 250,
+      trainingRate: 250
     };
     
     ratesForm.reset(staffRates);
@@ -297,22 +306,26 @@ const StaffPage: React.FC = () => {
             <DialogTitle>
               Payment Rates for {selectedStaff?.name}
             </DialogTitle>
+            <DialogDescription>
+              Configure payment rates for different types of work
+            </DialogDescription>
           </DialogHeader>
           <Form {...ratesForm}>
             <form onSubmit={ratesForm.handleSubmit(onRatesSubmit)} className="space-y-4">
-              <Tabs defaultValue="work" className="w-full">
-                <TabsList className="grid w-full grid-cols-2">
-                  <TabsTrigger value="work">Work Rates</TabsTrigger>
+              <Tabs defaultValue="sessions" className="w-full">
+                <TabsList className="grid w-full grid-cols-3">
+                  <TabsTrigger value="sessions">Sessions</TabsTrigger>
+                  <TabsTrigger value="noshows">No Shows</TabsTrigger>
                   <TabsTrigger value="other">Other Rates</TabsTrigger>
                 </TabsList>
                 
-                <TabsContent value="work" className="space-y-4 pt-4">
+                <TabsContent value="sessions" className="space-y-4 pt-4">
                   <FormField
                     control={ratesForm.control}
-                    name="perSessionRate"
+                    name="intakeSessionRate"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Payment fee for Actual Work (₪)</FormLabel>
+                        <FormLabel>Payment fee for Intake (₪)</FormLabel>
                         <FormControl>
                           <Input
                             type="number"
@@ -322,7 +335,7 @@ const StaffPage: React.FC = () => {
                           />
                         </FormControl>
                         <p className="text-xs text-muted-foreground">
-                          Rate paid for intake and follow-up sessions
+                          Rate paid for intake sessions
                         </p>
                       </FormItem>
                     )}
@@ -330,10 +343,10 @@ const StaffPage: React.FC = () => {
                   
                   <FormField
                     control={ratesForm.control}
-                    name="noShowCompRate"
+                    name="followUpSessionRate"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Payment fee for No-show (₪)</FormLabel>
+                        <FormLabel>Payment fee for Follow-up (₪)</FormLabel>
                         <FormControl>
                           <Input
                             type="number"
@@ -343,7 +356,51 @@ const StaffPage: React.FC = () => {
                           />
                         </FormControl>
                         <p className="text-xs text-muted-foreground">
-                          Compensation for scheduled sessions where patient didn't show up
+                          Rate paid for follow-up sessions
+                        </p>
+                      </FormItem>
+                    )}
+                  />
+                </TabsContent>
+                
+                <TabsContent value="noshows" className="space-y-4 pt-4">
+                  <FormField
+                    control={ratesForm.control}
+                    name="noShowIntakeRate"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Payment fee for No-show Intake (₪)</FormLabel>
+                        <FormControl>
+                          <Input
+                            type="number"
+                            placeholder="Enter amount"
+                            {...field}
+                            onChange={(e) => field.onChange(Number(e.target.value))}
+                          />
+                        </FormControl>
+                        <p className="text-xs text-muted-foreground">
+                          Compensation for scheduled intake sessions where patient didn't show up
+                        </p>
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <FormField
+                    control={ratesForm.control}
+                    name="noShowFollowUpRate"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Payment fee for No-show Follow-up (₪)</FormLabel>
+                        <FormControl>
+                          <Input
+                            type="number"
+                            placeholder="Enter amount"
+                            {...field}
+                            onChange={(e) => field.onChange(Number(e.target.value))}
+                          />
+                        </FormControl>
+                        <p className="text-xs text-muted-foreground">
+                          Compensation for scheduled follow-up sessions where patient didn't show up
                         </p>
                       </FormItem>
                     )}
@@ -374,10 +431,10 @@ const StaffPage: React.FC = () => {
                   
                   <FormField
                     control={ratesForm.control}
-                    name="adminTrainingRate"
+                    name="adminRate"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Payment for Administrative/Training Hour (₪)</FormLabel>
+                        <FormLabel>Payment for Administrative Hour (₪)</FormLabel>
                         <FormControl>
                           <Input
                             type="number"
@@ -387,7 +444,28 @@ const StaffPage: React.FC = () => {
                           />
                         </FormControl>
                         <p className="text-xs text-muted-foreground">
-                          Rate paid for administrative work and training hours
+                          Rate paid for administrative work hours
+                        </p>
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <FormField
+                    control={ratesForm.control}
+                    name="trainingRate"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Payment for Training Hour (₪)</FormLabel>
+                        <FormControl>
+                          <Input
+                            type="number"
+                            placeholder="Enter amount"
+                            {...field}
+                            onChange={(e) => field.onChange(Number(e.target.value))}
+                          />
+                        </FormControl>
+                        <p className="text-xs text-muted-foreground">
+                          Rate paid for training hours
                         </p>
                       </FormItem>
                     )}
