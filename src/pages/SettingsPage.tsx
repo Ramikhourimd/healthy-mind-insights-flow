@@ -8,12 +8,13 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
 import { useFinance } from "@/context/FinanceContext";
 import { toast } from "sonner";
+import { FinancialSettings } from "@/types/finance";
 
 const SettingsPage: React.FC = () => {
   const { settings, updateSettings } = useFinance();
-  const [formData, setFormData] = useState({
-    ...settings,
-  });
+  const [formData, setFormData] = useState<FinancialSettings>(
+    settings as FinancialSettings
+  );
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
