@@ -30,6 +30,7 @@ import {
   SelectValue 
 } from "@/components/ui/select";
 import { ClinicType, MeetingType, ShowStatus, ClinicalSession } from "@/types/finance";
+import ExcelImporter from "@/components/excel/ExcelImporter";
 
 const ExpensesPage: React.FC = () => {
   const { 
@@ -227,6 +228,13 @@ const ExpensesPage: React.FC = () => {
     return staff ? staff.name : "Unknown Staff";
   };
 
+  // Handle bulk import of clinical sessions
+  const handleImportSessions = (sessions: Omit<ClinicalSession, "id">[]) => {
+    sessions.forEach(session => {
+      addClinicalSession(session);
+    });
+  };
+
   return (
     <div>
       <div className="flex justify-between items-center mb-6">
@@ -344,7 +352,12 @@ const ExpensesPage: React.FC = () => {
         </TabsContent>
 
         <TabsContent value="clinical">
-          <div className="flex justify-end mb-4">
+          <div className="flex justify-between mb-4">
+            <ExcelImporter 
+              staffMembers={staffMembers}
+              currentPeriod={currentPeriod}
+              onImport={handleImportSessions}
+            />
             <Button onClick={handleAddNewSession}>
               <Plus className="mr-2 h-4 w-4" /> Add Clinical Session
             </Button>
