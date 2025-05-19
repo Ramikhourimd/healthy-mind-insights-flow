@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState } from "react";
 import {
   RevenueSource,
@@ -11,6 +10,7 @@ import {
   FinancialSettings,
   FinancialSummary,
   TimePeriod,
+  ClinicalSession,
 } from "../types/finance";
 
 // Sample initial data
@@ -102,6 +102,43 @@ const initialOverheads: FixedOverhead[] = [
   },
 ];
 
+// Initial sample data for clinical sessions
+const initialClinicalSessions: ClinicalSession[] = [
+  {
+    id: "1",
+    staffId: "1", // Dr. Smith
+    clinicType: "MCB",
+    meetingType: "Intake",
+    showStatus: "Show",
+    count: 3,
+    duration: 60,
+    month: 4,
+    year: 2025,
+  },
+  {
+    id: "2",
+    staffId: "1", // Dr. Smith
+    clinicType: "PRV",
+    meetingType: "FollowUp",
+    showStatus: "Show",
+    count: 5,
+    duration: 45,
+    month: 4,
+    year: 2025,
+  },
+  {
+    id: "3",
+    staffId: "2", // Dr. Johnson
+    clinicType: "MHS",
+    meetingType: "Intake",
+    showStatus: "NoShow",
+    count: 2,
+    duration: 60,
+    month: 4,
+    year: 2025,
+  },
+];
+
 // Calculate an initial financial summary based on sample data
 const calculateInitialSummary = (): FinancialSummary => {
   const totalRevenue = initialRevenueSources.reduce(
@@ -149,6 +186,7 @@ type FinanceContextType = {
   adminStaffFinancials: AdminStaffFinancials[];
   fixedOverheads: FixedOverhead[];
   bonusMetrics: BonusMetrics[];
+  clinicalSessions: ClinicalSession[];
   settings: FinancialSettings;
   financialSummary: FinancialSummary;
   addRevenueSource: (source: Omit<RevenueSource, "id">) => void;
@@ -157,6 +195,9 @@ type FinanceContextType = {
   addFixedOverhead: (overhead: Omit<FixedOverhead, "id">) => void;
   updateFixedOverhead: (overhead: FixedOverhead) => void;
   deleteFixedOverhead: (id: string) => void;
+  addClinicalSession: (session: Omit<ClinicalSession, "id">) => void;
+  updateClinicalSession: (session: ClinicalSession) => void;
+  deleteClinicalSession: (id: string) => void;
   updateSettings: (newSettings: Partial<FinancialSettings>) => void;
   calculateFinancialSummary: () => FinancialSummary;
 };
@@ -191,6 +232,9 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({
     initialOverheads
   );
   const [bonusMetrics, setBonusMetrics] = useState<BonusMetrics[]>([]);
+  const [clinicalSessions, setClinicalSessions] = useState<ClinicalSession[]>(
+    initialClinicalSessions
+  );
   const [settings, setSettings] = useState<FinancialSettings>(initialSettings);
   const [financialSummary, setFinancialSummary] = useState<FinancialSummary>(
     calculateInitialSummary()
@@ -237,6 +281,22 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({
   const deleteFixedOverhead = (id: string) => {
     setFixedOverheads(fixedOverheads.filter((o) => o.id !== id));
     setFinancialSummary(calculateFinancialSummary());
+  };
+
+  // CRUD functions for clinical sessions
+  const addClinicalSession = (session: Omit<ClinicalSession, "id">) => {
+    const newSession = { ...session, id: generateId() };
+    setClinicalSessions([...clinicalSessions, newSession]);
+  };
+
+  const updateClinicalSession = (session: ClinicalSession) => {
+    setClinicalSessions(
+      clinicalSessions.map((s) => (s.id === session.id ? session : s))
+    );
+  };
+
+  const deleteClinicalSession = (id: string) => {
+    setClinicalSessions(clinicalSessions.filter((s) => s.id !== id));
   };
 
   // Update settings
@@ -312,6 +372,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({
         adminStaffFinancials,
         fixedOverheads,
         bonusMetrics,
+        clinicalSessions,
         settings,
         financialSummary,
         addRevenueSource,
@@ -320,6 +381,9 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({
         addFixedOverhead,
         updateFixedOverhead,
         deleteFixedOverhead,
+        addClinicalSession,
+        updateClinicalSession,
+        deleteClinicalSession,
         updateSettings,
         calculateFinancialSummary,
       }}

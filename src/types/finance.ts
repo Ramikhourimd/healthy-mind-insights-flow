@@ -23,6 +23,28 @@ export type StaffMember = {
   active: boolean;
 };
 
+// Clinic type for session tracking
+export type ClinicType = "MCB" | "PRV" | "MHS" | "MHN" | "MHY" | "MSY" | "SPC" | "MHB";
+
+// Session meeting type
+export type MeetingType = "Intake" | "FollowUp";
+
+// Show status
+export type ShowStatus = "Show" | "NoShow";
+
+// Clinical staff session tracking
+export type ClinicalSession = {
+  id: string;
+  staffId: string;
+  clinicType: ClinicType;
+  meetingType: MeetingType;
+  showStatus: ShowStatus;
+  count: number;
+  duration: number; // in minutes
+  month: number;
+  year: number;
+};
+
 // Work data for clinical staff
 export type ClinicalStaffWork = {
   id: string;
