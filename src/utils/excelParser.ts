@@ -26,6 +26,9 @@ export const extractClinicalSessionsFromExcel = async (
 
         console.log('Extracted raw Excel data:', jsonData);
 
+        // Log staff members for debugging
+        console.log('Available staff members:', Object.entries(staffMap).map(([id, name]) => ({ id, name })));
+
         // Map the Excel data to our clinical session format
         const sessions: Omit<ClinicalSession, "id">[] = [];
         
@@ -40,12 +43,19 @@ export const extractClinicalSessionsFromExcel = async (
           startTime: ['שעת התחלה', 'התחלה', 'תאריך + שעה התחלה'],
           endTime: ['שעת סיום', 'סיום', 'תאריך + שעה סיום']
         };
+
+        // Create more specialized name-to-ID maps with variations for matching
+        const nameVariations = createStaffNameVariations(staffMap);
         
-        // Create a reverse map of staff names to IDs for easier lookup
-        const staffNameToIdMap = createStaffNameToIdMap(staffMap);
+        // First, show available columns in the Excel file for debugging
+        if (jsonData.length > 0) {
+          console.log('Available columns in Excel file:', Object.keys(jsonData[0]));
+        }
         
         // Process each row in the Excel data
-        jsonData.forEach((row: any) => {
+        jsonData.forEach((row: any, index: number) => {
+          console.log(`Processing row ${index + 1}:`, row);
+          
           // Try to find the provider/staff name from different possible columns
           let staffName = '';
           
@@ -53,6 +63,7 @@ export const extractClinicalSessionsFromExcel = async (
           for (const key of hebrewMappings.resourceName) {
             if (row[key]) {
               staffName = String(row[key]).trim();
+              console.log(`Found staff name in resource column '${key}': "${staffName}"`);
               break;
             }
           }
@@ -62,6 +73,7 @@ export const extractClinicalSessionsFromExcel = async (
             for (const key of hebrewMappings.providerName) {
               if (row[key]) {
                 staffName = String(row[key]).trim();
+                console.log(`Found staff name in provider column '${key}': "${staffName}"`);
                 break;
               }
             }
@@ -73,12 +85,14 @@ export const extractClinicalSessionsFromExcel = async (
             return; // Skip this iteration
           }
           
-          // Find staff ID from name using improved matching
-          const staffId = findStaffIdByName(staffName, staffMap, staffNameToIdMap);
+          // Find staff ID from name using improved matching with variations
+          const staffId = findStaffIdByNameEnhanced(staffName, staffMap, nameVariations);
           
           if (!staffId) {
             console.warn(`Could not find staff ID for name: ${staffName}`);
             return; // Skip this iteration
+          } else {
+            console.log(`Found staff ID for name "${staffName}": ${staffId} (${staffMap[staffId]})`);
           }
           
           // Find service type
@@ -152,6 +166,9 @@ export const extractClinicalSessionsFromExcel = async (
             const match = fullName.match(/[MH]{1,2}[-_\s]?([A-Za-z]{2,5})[-_\s]/i);
             if (match && match[1]) {
               clinicType = mapClinicType(match[1]);
+              console.log(`Extracted clinic type from "${fullName}": ${clinicType}`);
+            } else {
+              console.log(`Could not extract clinic type from "${fullName}", using default: ${clinicType}`);
             }
           }
           
@@ -174,7 +191,8 @@ export const extractClinicalSessionsFromExcel = async (
             if (statusLower.includes('לא הופיע') || 
                 statusLower.includes('noshow') ||
                 statusLower.includes('no show') ||
-                statusLower.includes('ביטל')) {
+                statusLower.includes('ביטל') ||
+                statusLower.includes('ביטול')) {
               showStatus = 'NoShow';
             }
           }
@@ -192,6 +210,8 @@ export const extractClinicalSessionsFromExcel = async (
             month: currentMonth,
             year: currentYear
           });
+          
+          console.log(`Successfully processed session: Staff=${staffMap[staffId]}, Clinic=${clinicType}, Type=${meetingType}`);
         });
         
         // Aggregate sessions with the same properties
@@ -218,127 +238,170 @@ export const extractClinicalSessionsFromExcel = async (
   });
 };
 
-// Create a map of normalized staff names to IDs for fuzzy matching
-const createStaffNameToIdMap = (staffMap: Record<string, string>): Record<string, string> => {
+// Create multiple variations of staff names for better matching
+const createStaffNameVariations = (staffMap: Record<string, string>): Record<string, string> => {
   const nameToIdMap: Record<string, string> = {};
   
   for (const [id, name] of Object.entries(staffMap)) {
-    // Add the full name
-    const normalizedName = normalizeString(name);
-    nameToIdMap[normalizedName] = id;
+    // Add variations for each staff name
+
+    // Full name variations
+    addNameVariation(nameToIdMap, name, id);
     
-    // Add first name only
-    const firstName = name.split(' ')[0];
-    const normalizedFirstName = normalizeString(firstName);
-    if (!nameToIdMap[normalizedFirstName]) {
-      nameToIdMap[normalizedFirstName] = id;
-    }
-    
-    // Add last name only
-    const nameParts = name.split(' ');
-    if (nameParts.length > 1) {
-      const lastName = nameParts[nameParts.length - 1];
-      const normalizedLastName = normalizeString(lastName);
-      if (!nameToIdMap[normalizedLastName]) {
-        nameToIdMap[normalizedLastName] = id;
+    // For doctors, add variations with and without title
+    if (name.includes('Dr.') || name.includes('ד"ר') || name.includes('דר ') || name.includes('ד\'ר')) {
+      // Without title
+      const nameWithoutTitle = name
+        .replace(/^(Dr\.|ד"ר|דר |ד'ר|דוקטור)\s+/i, '')
+        .trim();
+      addNameVariation(nameToIdMap, nameWithoutTitle, id);
+      
+      // English to Hebrew title conversion
+      if (name.includes('Dr.')) {
+        const hebrewName = name.replace(/Dr\.\s+/i, 'ד"ר ');
+        addNameVariation(nameToIdMap, hebrewName, id);
+      }
+      
+      // Hebrew to English title conversion
+      if (name.includes('ד"ר') || name.includes('דר ') || name.includes('ד\'ר')) {
+        const englishName = name.replace(/(ד"ר|דר |ד'ר|דוקטור)\s+/i, 'Dr. ');
+        addNameVariation(nameToIdMap, englishName, id);
       }
     }
     
-    // Add with/without prefixes like ד"ר
-    if (name.includes('ד"ר') || name.includes('דר ') || name.includes('ד\'ר') || name.includes('דוקטור')) {
-      const nameWithoutPrefix = name.replace(/^(ד"ר|דר |ד'ר|דוקטור)\s+/i, '');
-      const normalizedNameWithoutPrefix = normalizeString(nameWithoutPrefix);
-      nameToIdMap[normalizedNameWithoutPrefix] = id;
+    // Name parts (first name, last name)
+    const nameParts = name.replace(/^(Dr\.|ד"ר|דר |ד'ר|דוקטור)\s+/i, '').split(' ');
+    
+    // First name only
+    if (nameParts.length > 0) {
+      const firstName = nameParts[0];
+      addNameVariation(nameToIdMap, firstName, id);
+    }
+    
+    // Last name only
+    if (nameParts.length > 1) {
+      const lastName = nameParts[nameParts.length - 1];
+      addNameVariation(nameToIdMap, lastName, id);
     }
   }
   
+  console.log('Created staff name variations for matching:', nameToIdMap);
   return nameToIdMap;
+};
+
+// Helper to add normalized name variation
+const addNameVariation = (map: Record<string, string>, name: string, id: string): void => {
+  const normalized = normalizeString(name);
+  if (normalized && normalized.length > 1) {
+    map[normalized] = id;
+  }
 };
 
 // Normalize string for better matching
 const normalizeString = (str: string): string => {
+  if (!str) return '';
+  
   return str.toLowerCase()
     .trim()
     .replace(/\s+/g, ' ')
     .replace(/["']/g, '') // Remove quotes
-    .replace(/[״"]/g, ''); // Remove Hebrew quotes
+    .replace(/[״"]/g, '') // Remove Hebrew quotes
+    .replace(/['`]/g, '') // Remove apostrophes
+    .replace(/[^\w\sא-ת]/g, ''); // Remove special chars but keep Hebrew letters
 };
 
-// Helper to find staff ID by name with improved fuzzy matching
-const findStaffIdByName = (
+// Enhanced staff ID finder with multiple strategies
+const findStaffIdByNameEnhanced = (
   name: string, 
   staffMap: Record<string, string>,
-  nameToIdMap: Record<string, string>
+  nameVariations: Record<string, string>
 ): string => {
   if (!name) return '';
   
-  // First clean the name - remove quotes, normalize spaces
-  const cleanName = name.replace(/["'״"]/g, '').trim();
+  console.log(`Trying to match staff name: "${name}"`);
   
+  // First clean the name - remove quotes, normalize spaces
+  const cleanName = name
+    .replace(/["'״"]/g, '')
+    .replace(/['`]/g, '')
+    .trim();
+    
   // Normalize the name for consistent comparison
   const normalizedName = normalizeString(cleanName);
   
-  // Handle common prefixes by trying both with and without prefixes
-  const nameWithoutPrefix = normalizedName.replace(/^(ד"ר|דר |ד'ר|דוקטור)\s+/i, '');
+  // Get name without prefix (Dr., etc)
+  const nameWithoutPrefix = normalizedName.replace(/^(דר|ד"ר|דר |ד'ר|דוקטור|dr)\s+/i, '');
   
-  // 1. First, check exact match in the normalized name-to-id map
-  if (nameToIdMap[normalizedName]) {
-    return nameToIdMap[normalizedName];
+  console.log(`Normalized name: "${normalizedName}", without prefix: "${nameWithoutPrefix}"`);
+  
+  // 1. Direct match in variations map
+  if (nameVariations[normalizedName]) {
+    console.log(`Found direct match in variations for "${normalizedName}"`);
+    return nameVariations[normalizedName];
   }
   
-  // 2. Try without prefix 
-  if (nameToIdMap[nameWithoutPrefix]) {
-    return nameToIdMap[nameWithoutPrefix];
+  // 2. Try without prefix in variations map
+  if (nameVariations[nameWithoutPrefix]) {
+    console.log(`Found match without prefix in variations for "${nameWithoutPrefix}"`);
+    return nameVariations[nameWithoutPrefix];
   }
   
-  // 3. Check for exact match in the original staff map
-  for (const [id, staffName] of Object.entries(staffMap)) {
-    if (normalizeString(staffName) === normalizedName) {
+  // 3. Check for substring matches in variations
+  for (const [variant, id] of Object.entries(nameVariations)) {
+    // Skip very short variants
+    if (variant.length < 3) continue;
+    
+    if (normalizedName.includes(variant) || variant.includes(normalizedName)) {
+      console.log(`Found substring match between "${normalizedName}" and variant "${variant}"`);
       return id;
     }
     
-    // Try matching without prefix
-    if (normalizeString(staffName) === nameWithoutPrefix) {
+    if (nameWithoutPrefix.includes(variant) || variant.includes(nameWithoutPrefix)) {
+      console.log(`Found substring match between "${nameWithoutPrefix}" and variant "${variant}"`);
       return id;
     }
   }
   
-  // 4. Check if the provided name contains or is contained by any staff name
-  for (const [id, staffName] of Object.entries(staffMap)) {
-    const normalizedStaffName = normalizeString(staffName);
-    if (normalizedStaffName.includes(nameWithoutPrefix) || 
-        nameWithoutPrefix.includes(normalizedStaffName)) {
-      return id;
-    }
-  }
-  
-  // 5. Try finding last name match (often doctors are referred to by last name)
-  const nameParts = nameWithoutPrefix.split(' ');
+  // 4. Try word-by-word matching
+  const nameParts = nameWithoutPrefix.split(' ').filter(part => part.length > 1);
   if (nameParts.length > 0) {
-    const lastName = nameParts[nameParts.length - 1];
-    if (lastName.length > 2) { // Only consider substantive last names
-      for (const [id, staffName] of Object.entries(staffMap)) {
-        const staffNameParts = normalizeString(staffName).split(' ');
-        const staffLastName = staffNameParts[staffNameParts.length - 1];
-        if (lastName === staffLastName) {
+    for (const [id, staffName] of Object.entries(staffMap)) {
+      const staffNameNormalized = normalizeString(staffName);
+      const staffParts = staffNameNormalized.split(' ').filter(part => part.length > 1);
+      
+      // Check if any substantial parts match
+      for (const namePart of nameParts) {
+        if (namePart.length < 3) continue; // Skip very short parts
+        
+        if (staffParts.some(staffPart => 
+          staffPart.includes(namePart) || namePart.includes(staffPart))) {
+          console.log(`Found word part match between "${namePart}" and staff "${staffName}"`);
           return id;
         }
       }
     }
   }
   
-  // 6. Last attempt: check if any part of the name matches
+  // 5. Last attempt: check for transliteration differences in Hebrew/English names
+  // This is a simplified approach - in practice you might need a more sophisticated transliteration algorithm
   for (const [id, staffName] of Object.entries(staffMap)) {
-    const staffParts = normalizeString(staffName).split(' ');
-    for (const part of nameParts) {
-      if (part.length > 2 && staffParts.some(staffPart => 
-        staffPart.includes(part) || part.includes(staffPart))) {
+    const normalizedStaffName = normalizeString(staffName);
+    
+    // Remove vowels/spaces and compare core consonants for potential transliteration matches
+    const staffConsonants = normalizedStaffName.replace(/[aeiouy\s]/g, '');
+    const nameConsonants = normalizedName.replace(/[aeiouy\s]/g, '');
+    
+    if (staffConsonants.length > 3 && nameConsonants.length > 3) {
+      // Check if consonant patterns are similar enough
+      if (staffConsonants.includes(nameConsonants) || 
+          nameConsonants.includes(staffConsonants)) {
+        console.log(`Found possible transliteration match between "${name}" and "${staffName}"`);
         return id;
       }
     }
   }
   
-  // 7. Debug log to help identify missing matches
+  // Debug log if no match found
   console.error(`No staff match found for: "${name}" (normalized: "${normalizedName}", without prefix: "${nameWithoutPrefix}")`);
   console.error(`Available staff: ${JSON.stringify(staffMap)}`);
   

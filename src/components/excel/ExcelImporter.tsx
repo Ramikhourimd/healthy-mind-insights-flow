@@ -24,7 +24,7 @@ import {
   DialogDescription
 } from "@/components/ui/dialog";
 import { useToast } from '@/components/ui/use-toast';
-import { Bot, Upload, FileSpreadsheet, Info } from 'lucide-react';
+import { Bot, Upload, FileSpreadsheet, Info, AlertCircle, CheckCircle2 } from 'lucide-react';
 import {
   Tooltip,
   TooltipContent,
@@ -32,6 +32,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Progress } from "@/components/ui/progress";
 
 interface ExcelImporterProps {
   staffMembers: StaffMember[];
@@ -47,6 +48,7 @@ const ExcelImporter: React.FC<ExcelImporterProps> = ({
   const { toast } = useToast();
   const [file, setFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
+  const [processingProgress, setProcessingProgress] = useState(0);
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const [extractedSessions, setExtractedSessions] = useState<Omit<ClinicalSession, "id">[]>([]);
   const [isOpen, setIsOpen] = useState(false);
@@ -89,6 +91,14 @@ const ExcelImporter: React.FC<ExcelImporterProps> = ({
     setIsUploading(true);
     setImportError(null);
     
+    // Simulate processing progress
+    const progressInterval = setInterval(() => {
+      setProcessingProgress(prev => {
+        const newProgress = prev + 5;
+        return newProgress >= 90 ? 90 : newProgress;
+      });
+    }, 150);
+    
     try {
       console.log('Staff map for import:', staffMap);
       
@@ -99,15 +109,22 @@ const ExcelImporter: React.FC<ExcelImporterProps> = ({
         currentPeriod.year
       );
       
+      clearInterval(progressInterval);
+      setProcessingProgress(100);
+      
       setExtractedSessions(extractedData);
       
       if (extractedData.length > 0) {
         setShowConfirmDialog(true);
+        toast({
+          title: "Processing complete",
+          description: `Found ${extractedData.length} clinical sessions`,
+        });
       } else {
         setImportError("No valid sessions could be extracted. Please make sure staff names in the Excel file match those in the system.");
         toast({
-          title: "No valid data found",
-          description: "Couldn't find any valid clinical sessions in the Excel file. Check staff names match your system.",
+          title: "Import Error",
+          description: "No valid sessions could be extracted. Please check staff names match your system.",
           variant: "destructive"
         });
       }
@@ -120,7 +137,12 @@ const ExcelImporter: React.FC<ExcelImporterProps> = ({
         variant: "destructive"
       });
     } finally {
-      setIsUploading(false);
+      clearInterval(progressInterval);
+      setProcessingProgress(100);
+      setTimeout(() => {
+        setIsUploading(false);
+        setProcessingProgress(0);
+      }, 500);
     }
   };
 
@@ -145,6 +167,7 @@ const ExcelImporter: React.FC<ExcelImporterProps> = ({
     if (!open) {
       setFile(null);
       setImportError(null);
+      setProcessingProgress(0);
     }
     setIsOpen(open);
   };
@@ -188,6 +211,7 @@ const ExcelImporter: React.FC<ExcelImporterProps> = ({
 
           {importError && (
             <Alert variant="destructive" className="mb-4">
+              <AlertCircle className="h-4 w-4" />
               <AlertTitle>Import Error</AlertTitle>
               <AlertDescription>{importError}</AlertDescription>
             </Alert>
@@ -210,6 +234,13 @@ const ExcelImporter: React.FC<ExcelImporterProps> = ({
                 {file && (
                   <p className="mt-2 text-sm">Selected: {file.name}</p>
                 )}
+                
+                {isUploading && (
+                  <div className="w-full mt-4">
+                    <p className="text-sm mb-2">Processing file...</p>
+                    <Progress value={processingProgress} className="h-2" />
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>
@@ -226,8 +257,11 @@ const ExcelImporter: React.FC<ExcelImporterProps> = ({
               disabled={!file || isUploading}
               className="gap-1"
             >
-              <Upload className="h-4 w-4" />
-              {isUploading ? "Processing..." : "Process File"}
+              {isUploading ? (
+                <span className="flex items-center">Processing...</span>
+              ) : (
+                <span className="flex items-center"><Upload className="h-4 w-4 mr-1" /> Process File</span>
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -278,17 +312,45 @@ const ExcelImporter: React.FC<ExcelImporterProps> = ({
               </ul>
             </div>
             
-            <div className="mt-4">
-              <h3 className="font-medium mb-1">Staff Members in System</h3>
-              <div className="text-xs p-2 bg-gray-50 rounded border max-h-32 overflow-y-auto">
-                <ul className="list-disc pl-4 space-y-1">
-                  {Object.entries(staffNameLookup).map(([name, id]) => (
-                    <li key={id}>{name}</li>
-                  ))}
+            <Alert className="mt-4">
+              <AlertTitle className="flex items-center gap-2">
+                <CheckCircle2 className="h-4 w-4" />
+                Staff Name Matching
+              </AlertTitle>
+              <AlertDescription>
+                <p className="mb-2">The system attempts to match Excel staff names with system staff using multiple strategies:</p>
+                <ul className="list-disc pl-6 text-sm space-y-1">
+                  <li>Exact name matching</li>
+                  <li>Name with/without Dr. or ד"ר prefix</li>
+                  <li>First/last name matching</li>
+                  <li>Partial name matching</li>
+                  <li>Hebrew/English transliteration matching</li>
                 </ul>
+              </AlertDescription>
+            </Alert>
+            
+            <div className="mt-4">
+              <h3 className="font-medium mb-1">Available Staff Members in System</h3>
+              <div className="text-xs p-3 bg-gray-50 rounded border max-h-44 overflow-y-auto">
+                <table className="min-w-full">
+                  <thead>
+                    <tr className="border-b">
+                      <th className="text-left py-1 font-medium">Name</th>
+                      <th className="text-left py-1 font-medium">Role</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {staffMembers.map((staff) => (
+                      <tr key={staff.id} className="border-b border-gray-100">
+                        <td className="py-1.5">{staff.name}</td>
+                        <td className="py-1.5 text-gray-600">{staff.role}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
               <p className="text-xs text-muted-foreground mt-1">
-                Staff names in your Excel file should match one of these names.
+                Staff names in your Excel file should match one of these names using one of the matching strategies.
               </p>
             </div>
           </div>
