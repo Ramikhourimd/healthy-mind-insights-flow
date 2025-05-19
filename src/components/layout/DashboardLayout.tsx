@@ -7,7 +7,7 @@ export const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({
   children 
 }) => {
   return (
-    <SidebarProvider collapsedWidth={56}>
+    <SidebarProvider>
       <div className="flex min-h-screen w-full">
         <DashboardSidebar />
         <main className="flex-1 overflow-auto">

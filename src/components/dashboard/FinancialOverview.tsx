@@ -54,7 +54,7 @@ export const FinancialOverview: React.FC = () => {
               {formatCurrency(financialSummary.totalRevenue)}
             </div>
             <div className="p-2 bg-clinic-blue/10 rounded-full">
-              <Coins className="h-5 w-5 text-clinic-blue" />
+              <DollarSign className="h-5 w-5 text-clinic-blue" />
             </div>
           </div>
           <div className="text-xs text-muted-foreground mt-2">

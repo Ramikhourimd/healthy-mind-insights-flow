@@ -1,5 +1,5 @@
 
-import React from "react";
+import React, { useState } from "react";
 import { NavLink, useLocation } from "react-router-dom";
 import {
   Sidebar,
@@ -24,8 +24,13 @@ import {
 } from "lucide-react";
 
 export const DashboardSidebar: React.FC = () => {
-  const { collapsed } = useSidebar();
+  const sidebar = useSidebar();
+  const [sidebarWidth, setSidebarWidth] = useState(sidebar?.open ? "w-64" : "w-14");
   const location = useLocation();
+  
+  React.useEffect(() => {
+    setSidebarWidth(sidebar?.open ? "w-64" : "w-14");
+  }, [sidebar?.open]);
   
   // Menu items with their routes and icons
   const menuItems = [
@@ -48,12 +53,11 @@ export const DashboardSidebar: React.FC = () => {
 
   return (
     <Sidebar 
-      className={`${collapsed ? "w-14" : "w-64"} shadow-md border-r transition-all duration-200`} 
-      collapsible
+      className={`${sidebarWidth} shadow-md border-r transition-all duration-200`} 
     >
       {/* Logo section */}
-      <div className={`p-4 flex items-center justify-between ${collapsed ? "justify-center" : ""}`}>
-        {!collapsed && (
+      <div className={`p-4 flex items-center justify-between ${!sidebar?.open ? "justify-center" : ""}`}>
+        {sidebar?.open && (
           <div className="text-xl font-bold text-primary">
             HealthyMind
           </div>
@@ -70,7 +74,7 @@ export const DashboardSidebar: React.FC = () => {
                   <SidebarMenuButton asChild>
                     <NavLink to={item.route} className={getNavClass}>
                       <item.icon className="h-5 w-5" />
-                      {!collapsed && <span>{item.title}</span>}
+                      {sidebar?.open && <span>{item.title}</span>}
                     </NavLink>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
@@ -80,7 +84,7 @@ export const DashboardSidebar: React.FC = () => {
         </SidebarGroup>
         
         {/* Period selector */}
-        {!collapsed && (
+        {sidebar?.open && (
           <div className="px-4 mt-8">
             <div className="text-sm font-medium mb-2 text-sidebar-foreground/70">
               Current Period
