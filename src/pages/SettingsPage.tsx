@@ -22,18 +22,21 @@ const SettingsPage: React.FC = () => {
     if (name.includes('.')) {
       // Handle nested objects like bonusCsatThresholds.level1
       const [parent, child] = name.split('.');
-      setFormData({
-        ...formData,
-        [parent]: {
-          ...formData[parent as keyof typeof formData],
-          [child]: parseFloat(value)
-        }
+      setFormData((prevData) => {
+        // Create a new object with the updated nested property
+        return {
+          ...prevData,
+          [parent]: {
+            ...(prevData[parent as keyof FinancialSettings] as Record<string, any>),
+            [child]: parseFloat(value)
+          }
+        };
       });
     } else {
-      setFormData({
-        ...formData,
+      setFormData((prevData) => ({
+        ...prevData,
         [name]: parseFloat(value)
-      });
+      }));
     }
   };
 
