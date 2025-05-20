@@ -12,6 +12,8 @@ import { useForm } from "react-hook-form";
 import { StaffMember, StaffRole, ClinicalStaffRates } from "@/types/finance";
 import { UserPlus, Edit, Trash2, DollarSign } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useToast } from "@/hooks/use-toast";
+import { v4 as uuidv4 } from "uuid";
 
 // Staff form type
 type StaffFormValues = {
@@ -34,31 +36,57 @@ type StaffRatesFormValues = {
 };
 
 const StaffPage: React.FC = () => {
-  const { staffMembers, currentPeriod } = useFinance();
+  const { staffMembers: initialStaffMembers, currentPeriod } = useFinance();
+  const [staffMembers, setStaffMembers] = useState<StaffMember[]>(initialStaffMembers);
   const [openDialog, setOpenDialog] = useState(false);
   const [openRatesDialog, setOpenRatesDialog] = useState(false);
   const [editingStaff, setEditingStaff] = useState<StaffMember | null>(null);
   const [selectedStaff, setSelectedStaff] = useState<StaffMember | null>(null);
+  const { toast } = useToast();
   
-  // Mock functions for staff management (would connect to FinanceContext in a complete version)
+  // Staff management functions
   const addStaffMember = (staff: Omit<StaffMember, "id">) => {
+    const newStaff = {
+      ...staff,
+      id: uuidv4()
+    } as StaffMember;
+    
+    setStaffMembers(prev => [...prev, newStaff]);
+    toast({
+      title: "Staff Added",
+      description: `${staff.name} has been added to the staff list.`,
+    });
     console.log("Adding staff member:", staff);
-    // Would call a context method in the complete version
   };
 
   const updateStaffMember = (staff: StaffMember) => {
+    setStaffMembers(prev => prev.map(s => s.id === staff.id ? staff : s));
+    toast({
+      title: "Staff Updated",
+      description: `${staff.name}'s information has been updated.`,
+    });
     console.log("Updating staff member:", staff);
-    // Would call a context method in the complete version
   };
 
   const deleteStaffMember = (id: string) => {
+    const staffToDelete = staffMembers.find(s => s.id === id);
+    if (staffToDelete) {
+      setStaffMembers(prev => prev.filter(s => s.id !== id));
+      toast({
+        title: "Staff Removed",
+        description: `${staffToDelete.name} has been removed from the staff list.`,
+        variant: "destructive"
+      });
+    }
     console.log("Deleting staff member:", id);
-    // Would call a context method in the complete version
   };
 
   const updateStaffRates = (rates: ClinicalStaffRates) => {
+    toast({
+      title: "Rates Updated",
+      description: `Payment rates have been updated.`,
+    });
     console.log("Updating staff rates:", rates);
-    // Would call a context method in the complete version
   };
 
   // Setup forms
@@ -240,6 +268,9 @@ const StaffPage: React.FC = () => {
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>{editingStaff ? 'Edit Staff Member' : 'Add New Staff Member'}</DialogTitle>
+            <DialogDescription>
+              {editingStaff ? 'Update staff member details' : 'Add a new staff member to the system'}
+            </DialogDescription>
           </DialogHeader>
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
