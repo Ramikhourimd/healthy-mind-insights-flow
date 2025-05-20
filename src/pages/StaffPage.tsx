@@ -38,6 +38,7 @@ type StaffRatesFormValues = {
 const StaffPage: React.FC = () => {
   const { staffMembers: initialStaffMembers, currentPeriod } = useFinance();
   const [staffMembers, setStaffMembers] = useState<StaffMember[]>(initialStaffMembers);
+  const [staffRates, setStaffRates] = useState<ClinicalStaffRates[]>([]);
   const [openDialog, setOpenDialog] = useState(false);
   const [openRatesDialog, setOpenRatesDialog] = useState(false);
   const [editingStaff, setEditingStaff] = useState<StaffMember | null>(null);
@@ -82,11 +83,45 @@ const StaffPage: React.FC = () => {
   };
 
   const updateStaffRates = (rates: ClinicalStaffRates) => {
+    // Check if rates already exist for this staff
+    const existingRatesIndex = staffRates.findIndex(r => r.staffId === rates.staffId);
+    
+    if (existingRatesIndex >= 0) {
+      // Update existing rates
+      setStaffRates(prev => prev.map((r, index) => 
+        index === existingRatesIndex ? rates : r
+      ));
+    } else {
+      // Add new rates
+      setStaffRates(prev => [...prev, rates]);
+    }
+    
     toast({
       title: "Rates Updated",
       description: `Payment rates have been updated.`,
     });
     console.log("Updating staff rates:", rates);
+  };
+
+  // Get staff rates by staff ID
+  const getStaffRates = (staffId: string) => {
+    const existingRates = staffRates.find(r => r.staffId === staffId);
+    
+    if (existingRates) {
+      return existingRates;
+    }
+    
+    // Return default rates if none exist
+    return {
+      staffId,
+      intakeSessionRate: 600,
+      followUpSessionRate: 450,
+      noShowIntakeRate: 300,
+      noShowFollowUpRate: 200,
+      availabilityRetainerRate: 150,
+      adminRate: 250,
+      trainingRate: 250
+    } as ClinicalStaffRates;
   };
 
   // Setup forms
@@ -138,20 +173,10 @@ const StaffPage: React.FC = () => {
   const handleEditRates = (staff: StaffMember) => {
     setSelectedStaff(staff);
     
-    // Get staff rates (mock implementation)
-    // In a real implementation, we would fetch the rates from the context
-    const staffRates = {
-      staffId: staff.id,
-      intakeSessionRate: 600, // Default values, would be loaded from context
-      followUpSessionRate: 450,
-      noShowIntakeRate: 300,
-      noShowFollowUpRate: 200,
-      availabilityRetainerRate: 150,
-      adminRate: 250,
-      trainingRate: 250
-    };
+    // Get staff rates from state
+    const staffRatesData = getStaffRates(staff.id);
     
-    ratesForm.reset(staffRates);
+    ratesForm.reset(staffRatesData);
     setOpenRatesDialog(true);
   };
 
