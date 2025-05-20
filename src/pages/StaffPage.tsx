@@ -158,6 +158,7 @@ const StaffPage: React.FC = () => {
   // Handle form submission
   const onSubmit = (data: StaffFormValues) => {
     if (editingStaff) {
+      // Ensure we include the ID in the updated staff member object
       updateStaffMember({
         ...data,
         id: editingStaff.id
