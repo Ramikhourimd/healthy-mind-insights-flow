@@ -24,7 +24,7 @@ import {
   DialogDescription
 } from "@/components/ui/dialog";
 import { useToast } from '@/components/ui/use-toast';
-import { Bot, Upload, FileSpreadsheet, Info, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { Bot, Upload, FileSpreadsheet, Info, AlertCircle, CheckCircle2, ExternalLink } from 'lucide-react';
 import {
   Tooltip,
   TooltipContent,
@@ -33,11 +33,23 @@ import {
 } from "@/components/ui/tooltip";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Progress } from "@/components/ui/progress";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 interface ExcelImporterProps {
   staffMembers: StaffMember[];
   currentPeriod: TimePeriod;
   onImport: (sessions: Omit<ClinicalSession, "id">[]) => void;
+}
+
+interface StaffNameMapping {
+  excelName: string;
+  systemStaffId: string;
 }
 
 const ExcelImporter: React.FC<ExcelImporterProps> = ({ 
@@ -55,6 +67,15 @@ const ExcelImporter: React.FC<ExcelImporterProps> = ({
   const [showFormatHelp, setShowFormatHelp] = useState(false);
   const [importError, setImportError] = useState<string | null>(null);
   const [staffNameLookup, setStaffNameLookup] = useState<Record<string, string>>({});
+  
+  // New state for staff mapping
+  const [showStaffMappingDialog, setShowStaffMappingDialog] = useState(false);
+  const [unmappedStaffNames, setUnmappedStaffNames] = useState<string[]>([]);
+  const [staffMappings, setStaffMappings] = useState<StaffNameMapping[]>([]);
+  const [rawExcelData, setRawExcelData] = useState<any[]>([]);
+  const [parseOptions, setParseOptions] = useState({ 
+    manualMapping: false 
+  });
 
   // Create reverse staff mapping (name to ID) for debug display
   useEffect(() => {
@@ -90,6 +111,8 @@ const ExcelImporter: React.FC<ExcelImporterProps> = ({
 
     setIsUploading(true);
     setImportError(null);
+    setUnmappedStaffNames([]);
+    setStaffMappings([]);
     
     // Simulate processing progress
     const progressInterval = setInterval(() => {
@@ -102,6 +125,35 @@ const ExcelImporter: React.FC<ExcelImporterProps> = ({
     try {
       console.log('Staff map for import:', staffMap);
       
+      // First extract raw data to identify staff names
+      const { rawData, unmappedStaff } = await extractClinicalSessionsFromExcel(
+        file,
+        staffMap,
+        currentPeriod.month,
+        currentPeriod.year,
+        { extractRawData: true }
+      );
+      
+      setRawExcelData(rawData);
+      
+      // If there are unmapped staff names, show the mapping dialog
+      if (unmappedStaff && unmappedStaff.length > 0) {
+        console.log('Found unmapped staff names:', unmappedStaff);
+        setUnmappedStaffNames(unmappedStaff);
+        
+        clearInterval(progressInterval);
+        setProcessingProgress(100);
+        
+        setTimeout(() => {
+          setIsUploading(false);
+          setProcessingProgress(0);
+          setShowStaffMappingDialog(true);
+        }, 500);
+        
+        return;
+      }
+      
+      // Process with automatic mapping
       const extractedData = await extractClinicalSessionsFromExcel(
         file,
         staffMap,
@@ -121,10 +173,10 @@ const ExcelImporter: React.FC<ExcelImporterProps> = ({
           description: `Found ${extractedData.length} clinical sessions`,
         });
       } else {
-        setImportError("No valid sessions could be extracted. Please make sure staff names in the Excel file match those in the system.");
+        setImportError("No valid sessions could be extracted. Please map staff names manually.");
         toast({
           title: "Import Error",
-          description: "No valid sessions could be extracted. Please check staff names match your system.",
+          description: "No valid sessions could be extracted. Please try mapping staff names manually.",
           variant: "destructive"
         });
       }
@@ -155,6 +207,77 @@ const ExcelImporter: React.FC<ExcelImporterProps> = ({
       description: `${extractedSessions.length} sessions were imported`,
       variant: "default"
     });
+  };
+
+  const handleStaffMappingChange = (excelName: string, systemStaffId: string) => {
+    // Update the mapping for this Excel staff name
+    setStaffMappings(prevMappings => {
+      const existingIndex = prevMappings.findIndex(m => m.excelName === excelName);
+      
+      if (existingIndex >= 0) {
+        // Update existing mapping
+        const newMappings = [...prevMappings];
+        newMappings[existingIndex].systemStaffId = systemStaffId;
+        return newMappings;
+      } else {
+        // Add new mapping
+        return [...prevMappings, { excelName, systemStaffId }];
+      }
+    });
+  };
+
+  const handleApplyMappings = async () => {
+    setShowStaffMappingDialog(false);
+    setIsUploading(true);
+    
+    // Create temporary staff map with the manual mappings included
+    const enhancedStaffMap = { ...staffMap };
+    const excelToSystemMap: Record<string, string> = {};
+    
+    // Add manual mappings to the excel-to-system map
+    staffMappings.forEach(mapping => {
+      if (mapping.systemStaffId) {
+        excelToSystemMap[mapping.excelName] = mapping.systemStaffId;
+      }
+    });
+    
+    console.log('Manual staff mappings:', excelToSystemMap);
+    
+    try {
+      // Process with manual mappings
+      const extractedData = await extractClinicalSessionsFromExcel(
+        file!,
+        staffMap,
+        currentPeriod.month,
+        currentPeriod.year,
+        { 
+          manualMapping: true,
+          excelToSystemMap
+        }
+      );
+      
+      setExtractedSessions(extractedData);
+      
+      if (extractedData.length > 0) {
+        setShowConfirmDialog(true);
+        toast({
+          title: "Processing complete with manual mappings",
+          description: `Found ${extractedData.length} clinical sessions`,
+        });
+      } else {
+        setImportError("No valid sessions could be extracted even with manual mappings.");
+        toast({
+          title: "Import Error",
+          description: "No valid sessions could be extracted even with manual mappings. Please check your file.",
+          variant: "destructive"
+        });
+      }
+    } catch (error) {
+      console.error('Error processing with manual mappings:', error);
+      setImportError("An error occurred while processing with manual mappings.");
+    } finally {
+      setIsUploading(false);
+    }
   };
 
   const getStaffNameById = (id: string) => {
@@ -303,6 +426,16 @@ const ExcelImporter: React.FC<ExcelImporterProps> = ({
               </ul>
             </div>
             
+            <Alert className="mt-4">
+              <AlertTitle className="flex items-center gap-2">
+                <CheckCircle2 className="h-4 w-4" />
+                NEW: Manual Staff Mapping
+              </AlertTitle>
+              <AlertDescription>
+                <p>If automatic staff name matching fails, you can now manually map Excel staff names to your system staff.</p>
+              </AlertDescription>
+            </Alert>
+            
             <div className="p-3 bg-amber-50 border border-amber-200 rounded-md">
               <h3 className="font-medium text-amber-800 mb-1">חשוב לדעת</h3>
               <ul className="list-disc pl-6 text-sm text-amber-800">
@@ -358,6 +491,74 @@ const ExcelImporter: React.FC<ExcelImporterProps> = ({
           <DialogFooter>
             <Button onClick={() => setShowFormatHelp(false)}>
               הבנתי
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* NEW: Staff Mapping Dialog */}
+      <Dialog open={showStaffMappingDialog} onOpenChange={setShowStaffMappingDialog}>
+        <DialogContent className="sm:max-w-xl">
+          <DialogHeader>
+            <DialogTitle>Map Excel Staff Names to System Staff</DialogTitle>
+            <DialogDescription>
+              Some staff names in the Excel file couldn't be matched automatically to your system staff. 
+              Please map each Excel staff name to the corresponding staff member in your system.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4 max-h-96 overflow-y-auto">
+            {unmappedStaffNames.length > 0 ? (
+              <div className="space-y-4">
+                {unmappedStaffNames.map((excelName, index) => (
+                  <div key={index} className="grid grid-cols-5 items-center gap-4">
+                    <div className="col-span-2">
+                      <p className="text-sm font-medium">{excelName}</p>
+                      <p className="text-xs text-muted-foreground">Excel staff name</p>
+                    </div>
+                    <div className="col-span-3">
+                      <Select 
+                        value={staffMappings.find(m => m.excelName === excelName)?.systemStaffId || ""}
+                        onValueChange={(value) => handleStaffMappingChange(excelName, value)}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select system staff" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {staffMembers.map(staff => (
+                            <SelectItem key={staff.id} value={staff.id}>
+                              {staff.name} ({staff.role})
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <Alert>
+                <AlertDescription>
+                  No unmapped staff names found. This dialog shouldn't appear.
+                </AlertDescription>
+              </Alert>
+            )}
+          </div>
+          
+          <DialogFooter className="flex items-center justify-between">
+            <Button 
+              variant="outline" 
+              onClick={() => setShowStaffMappingDialog(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleApplyMappings}
+              disabled={unmappedStaffNames.some(name => 
+                !staffMappings.find(m => m.excelName === name && m.systemStaffId)
+              )}
+            >
+              Apply Mappings & Continue
             </Button>
           </DialogFooter>
         </DialogContent>

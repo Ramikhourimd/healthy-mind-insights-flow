@@ -1,14 +1,20 @@
-
 import * as XLSX from 'xlsx';
 import { ClinicalSession, ClinicType, MeetingType, ShowStatus } from '@/types/finance';
+
+interface ExtractionOptions {
+  manualMapping?: boolean;
+  excelToSystemMap?: Record<string, string>;
+  extractRawData?: boolean;
+}
 
 // This function extracts clinical sessions from an Excel file with Hebrew columns
 export const extractClinicalSessionsFromExcel = async (
   file: File, 
   staffMap: Record<string, string>,
   currentMonth: number,
-  currentYear: number
-): Promise<Omit<ClinicalSession, "id">[]> => {
+  currentYear: number,
+  options: ExtractionOptions = {}
+): Promise<any> => {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     
@@ -28,6 +34,15 @@ export const extractClinicalSessionsFromExcel = async (
 
         // Log staff members for debugging
         console.log('Available staff members:', Object.entries(staffMap).map(([id, name]) => ({ id, name })));
+
+        // If we just need to extract unmapped staff, handle that first
+        if (options.extractRawData) {
+          const unmappedStaff = extractUnmappedStaffNames(jsonData, staffMap);
+          return resolve({ 
+            rawData: jsonData,
+            unmappedStaff
+          });
+        }
 
         // Map the Excel data to our clinical session format
         const sessions: Omit<ClinicalSession, "id">[] = [];
@@ -85,8 +100,17 @@ export const extractClinicalSessionsFromExcel = async (
             return; // Skip this iteration
           }
           
-          // Find staff ID from name using improved matching with variations
-          const staffId = findStaffIdByNameEnhanced(staffName, staffMap, nameVariations);
+          // Find staff ID using either manual mapping or automatic matching
+          let staffId = '';
+          
+          // If manual mapping is enabled, try to find the staff ID in the manual mapping first
+          if (options.manualMapping && options.excelToSystemMap && options.excelToSystemMap[staffName]) {
+            staffId = options.excelToSystemMap[staffName];
+            console.log(`Using manual mapping for staff "${staffName}" -> ID: ${staffId} (${staffMap[staffId]})`);
+          } else {
+            // Otherwise use automatic matching
+            staffId = findStaffIdByNameEnhanced(staffName, staffMap, nameVariations);
+          }
           
           if (!staffId) {
             console.warn(`Could not find staff ID for name: ${staffName}`);
@@ -236,6 +260,52 @@ export const extractClinicalSessionsFromExcel = async (
     
     reader.readAsArrayBuffer(file);
   });
+};
+
+// Extract unique unmapped staff names from Excel data
+const extractUnmappedStaffNames = (jsonData: any[], staffMap: Record<string, string>): string[] => {
+  const unmappedStaff = new Set<string>();
+  const nameVariations = createStaffNameVariations(staffMap);
+  
+  // Hebrew column mappings - reused from main function
+  const hebrewMappings = {
+    providerName: ['פרובידר', 'שם מטפל', 'מטפל', 'רופא', 'שם', 'שם יוצר', 'תאריך יצירה / שם יוצר'],
+    resourceName: ['משאבים', 'משאב', 'ספק']
+  };
+  
+  jsonData.forEach((row: any) => {
+    let staffName = '';
+    
+    // First try resource columns
+    for (const key of hebrewMappings.resourceName) {
+      if (row[key]) {
+        staffName = String(row[key]).trim();
+        break;
+      }
+    }
+    
+    // If not found, try provider columns
+    if (!staffName) {
+      for (const key of hebrewMappings.providerName) {
+        if (row[key]) {
+          staffName = String(row[key]).trim();
+          break;
+        }
+      }
+    }
+    
+    if (staffName) {
+      // Try to match with existing staff
+      const staffId = findStaffIdByNameEnhanced(staffName, staffMap, nameVariations);
+      
+      // If no match found, add to unmapped set
+      if (!staffId) {
+        unmappedStaff.add(staffName);
+      }
+    }
+  });
+  
+  return Array.from(unmappedStaff);
 };
 
 // Create multiple variations of staff names for better matching
