@@ -65,7 +65,7 @@ type FinanceContextType = {
   addFixedOverhead: (overhead: Omit<FixedOverhead, "id">) => Promise<void>;
   updateFixedOverhead: (overhead: FixedOverhead) => Promise<void>;
   deleteFixedOverhead: (id: string) => Promise<void>;
-  addClinicalSession: (session: Omit<ClinicalSession, "id">) => void;
+  addClinicalSession: (sessionData: Omit<ClinicalSession, "id">) => string;
   updateClinicalSession: (session: ClinicalSession) => void;
   deleteClinicalSession: (id: string) => void;
   updateSettings: (newSettings: Partial<FinancialSettings>) => Promise<void>;
@@ -811,9 +811,25 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({
   };
 
   // For clinical sessions, we're still using local state
-  const addClinicalSession = (session: Omit<ClinicalSession, "id">) => {
-    const newSession = { ...session, id: Date.now().toString(36) + Math.random().toString(36).substring(2) };
-    setClinicalSessions([...clinicalSessions, newSession]);
+  const addClinicalSession = (sessionData: Omit<ClinicalSession, "id">) => {
+    console.log("addClinicalSession called with:", sessionData);
+    const id = uuidv4();
+    const newSession = { ...sessionData, id };
+    
+    setClinicalSessions(prev => {
+      const updated = [...prev, newSession];
+      console.log("Updated clinical sessions:", updated);
+      return updated;
+    });
+    
+    // Update summary after adding a session
+    setTimeout(() => {
+      const summary = calculateFinancialSummary();
+      setFinancialSummary(summary);
+      console.log("Financial summary updated after adding session:", summary);
+    }, 50);
+    
+    return id;
   };
 
   const updateClinicalSession = (session: ClinicalSession) => {

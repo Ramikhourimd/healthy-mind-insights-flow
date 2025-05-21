@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -30,8 +31,10 @@ import {
 } from "@/components/ui/select";
 import { ClinicType, MeetingType, ShowStatus, ClinicalSession } from "@/types/finance";
 import ExcelImporter from "@/components/excel/ExcelImporter";
+import { useToast } from "@/components/ui/use-toast";
 
 const ExpensesPage: React.FC = () => {
+  const { toast } = useToast();
   const { 
     fixedOverheads, 
     addFixedOverhead, 
@@ -47,20 +50,24 @@ const ExpensesPage: React.FC = () => {
     updateFinancialSummary
   } = useFinance();
   
+  // State to track sessions
+  const [displayedSessions, setDisplayedSessions] = useState<ClinicalSession[]>([]);
+  
   // Filter overheads for current period
   const filteredOverheads = fixedOverheads.filter(
     overhead => overhead.month === currentPeriod.month && overhead.year === currentPeriod.year
   );
 
-  // Filter clinical sessions for current period
-  const filteredSessions = clinicalSessions.filter(
-    session => session.month === currentPeriod.month && session.year === currentPeriod.year
-  );
-  
-  // Log filtered sessions whenever they change
+  // Update displayed sessions whenever the source data changes
   useEffect(() => {
-    console.log("Current filtered sessions:", filteredSessions);
-  }, [filteredSessions]);
+    // Filter clinical sessions for current period
+    const filtered = clinicalSessions.filter(
+      session => session.month === currentPeriod.month && session.year === currentPeriod.year
+    );
+    
+    console.log("Updated filtered sessions:", filtered);
+    setDisplayedSessions(filtered);
+  }, [clinicalSessions, currentPeriod.month, currentPeriod.year]);
 
   // State for the overhead form
   const [isOverheadDialogOpen, setIsOverheadDialogOpen] = useState(false);
@@ -233,27 +240,47 @@ const ExpensesPage: React.FC = () => {
     return staff ? staff.name : "Unknown Staff";
   };
 
-  // Handle bulk import of clinical sessions with improved logging
+  // Handle bulk import of clinical sessions with improved handling
   const handleImportSessions = (sessions: Omit<ClinicalSession, "id">[]) => {
     console.log("Importing sessions in ExpensesPage:", sessions);
     
-    // Use this flag to track if we've finished adding all sessions
-    let sessionsAdded = 0;
+    if (sessions.length === 0) {
+      toast({
+        title: "Import Error",
+        description: "No valid sessions found to import",
+        variant: "destructive"
+      });
+      return;
+    }
     
+    // Counter for progress tracking
+    let sessionsAdded = 0;
+    const totalSessions = sessions.length;
+    
+    // Add each session one by one
     sessions.forEach(session => {
       console.log(`Adding session for staff ${session.staffId}:`, session);
       addClinicalSession(session);
       sessionsAdded++;
-      
-      // If this is the last session, update financial summary
-      if (sessionsAdded === sessions.length) {
-        console.log("All sessions added, updating financial summary");
-        setTimeout(() => {
-          updateFinancialSummary();
-          console.log("Financial summary updated after import");
-        }, 100);
-      }
     });
+    
+    // Force update financial summary after all sessions are imported
+    setTimeout(() => {
+      updateFinancialSummary();
+      console.log("Financial summary updated after import");
+      
+      // Get latest sessions filtered for current period
+      const currentSessions = clinicalSessions.filter(
+        s => s.month === currentPeriod.month && s.year === currentPeriod.year
+      );
+      setDisplayedSessions(currentSessions);
+      
+      toast({
+        title: "Import Successful",
+        description: `${sessionsAdded} clinical sessions were imported`,
+        variant: "default"
+      });
+    }, 300);
   };
 
   return (
@@ -386,7 +413,9 @@ const ExpensesPage: React.FC = () => {
 
           <Card className="shadow-sm">
             <CardHeader>
-              <CardTitle className="text-lg font-medium">Clinical Staff Sessions</CardTitle>
+              <CardTitle className="text-lg font-medium">
+                Clinical Staff Sessions ({displayedSessions.length} sessions)
+              </CardTitle>
             </CardHeader>
             <CardContent>
               <Table>
@@ -402,8 +431,8 @@ const ExpensesPage: React.FC = () => {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredSessions.length > 0 ? (
-                    filteredSessions.map((session) => (
+                  {displayedSessions.length > 0 ? (
+                    displayedSessions.map((session) => (
                       <TableRow key={session.id}>
                         <TableCell>{getStaffNameById(session.staffId)}</TableCell>
                         <TableCell>{session.clinicType}</TableCell>
@@ -455,7 +484,7 @@ const ExpensesPage: React.FC = () => {
                       {staffMembers
                         .filter(staff => staff.role === "Psychiatrist" || staff.role === "CaseManager")
                         .map(staff => {
-                          const staffSessions = filteredSessions.filter(s => s.staffId === staff.id);
+                          const staffSessions = displayedSessions.filter(s => s.staffId === staff.id);
                           const intakes = staffSessions.filter(s => s.meetingType === "Intake").reduce((sum, s) => sum + s.count, 0);
                           const followUps = staffSessions.filter(s => s.meetingType === "FollowUp").reduce((sum, s) => sum + s.count, 0);
                           const noShows = staffSessions.filter(s => s.showStatus === "NoShow").reduce((sum, s) => sum + s.count, 0);
