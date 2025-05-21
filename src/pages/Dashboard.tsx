@@ -1,15 +1,26 @@
 
-import React from "react";
+import React, { useEffect } from "react";
 import { DashboardHeader } from "@/components/dashboard/DashboardHeader";
 import { FinancialOverview } from "@/components/dashboard/FinancialOverview";
 import { RevenueBreakdown } from "@/components/dashboard/RevenueBreakdown";
 import { ExpensesBreakdown } from "@/components/dashboard/ExpensesBreakdown";
 import { KeyIndicators } from "@/components/dashboard/KeyIndicators";
+import { FinanceContextDebugger } from "@/context/FinanceContext-debug";
+import { useFinance } from "@/context/FinanceContext";
 
 const Dashboard: React.FC = () => {
+  const { clinicalSessions } = useFinance();
+
+  // Debug: Log sessions when the dashboard renders
+  useEffect(() => {
+    console.log("Dashboard rendered, total clinical sessions:", clinicalSessions.length);
+  }, [clinicalSessions]);
+
   return (
     <div>
       <DashboardHeader />
+      
+      <FinanceContextDebugger />
       
       <FinancialOverview />
       

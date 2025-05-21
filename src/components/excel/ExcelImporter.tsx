@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -198,7 +197,9 @@ const ExcelImporter: React.FC<ExcelImporterProps> = ({
     }
   };
 
+  // Handle confirm import - add debugging log
   const handleConfirmImport = () => {
+    console.log("Importing sessions:", extractedSessions);
     onImport(extractedSessions);
     setShowConfirmDialog(false);
     setFile(null);
@@ -226,6 +227,7 @@ const ExcelImporter: React.FC<ExcelImporterProps> = ({
     });
   };
 
+  // Handle bulk import of sessions with additional debugging
   const handleApplyMappings = async () => {
     setShowStaffMappingDialog(false);
     setIsUploading(true);
@@ -256,6 +258,7 @@ const ExcelImporter: React.FC<ExcelImporterProps> = ({
         }
       );
       
+      console.log("Extracted sessions with manual mapping:", extractedData);
       setExtractedSessions(extractedData);
       
       if (extractedData.length > 0) {

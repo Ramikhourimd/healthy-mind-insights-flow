@@ -1,5 +1,4 @@
-
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -57,6 +56,11 @@ const ExpensesPage: React.FC = () => {
     session => session.month === currentPeriod.month && session.year === currentPeriod.year
   );
   
+  // Log filtered sessions whenever they change
+  useEffect(() => {
+    console.log("Current filtered sessions:", filteredSessions);
+  }, [filteredSessions]);
+
   // State for the overhead form
   const [isOverheadDialogOpen, setIsOverheadDialogOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
@@ -228,9 +232,11 @@ const ExpensesPage: React.FC = () => {
     return staff ? staff.name : "Unknown Staff";
   };
 
-  // Handle bulk import of clinical sessions
+  // Handle bulk import of clinical sessions with improved logging
   const handleImportSessions = (sessions: Omit<ClinicalSession, "id">[]) => {
+    console.log("Importing sessions in ExpensesPage:", sessions);
     sessions.forEach(session => {
+      console.log(`Adding session for staff ${session.staffId}:`, session);
       addClinicalSession(session);
     });
   };
@@ -381,27 +387,28 @@ const ExpensesPage: React.FC = () => {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredSessions.map((session) => (
-                    <TableRow key={session.id}>
-                      <TableCell>{getStaffNameById(session.staffId)}</TableCell>
-                      <TableCell>{session.clinicType}</TableCell>
-                      <TableCell>{session.meetingType}</TableCell>
-                      <TableCell>{session.showStatus}</TableCell>
-                      <TableCell className="text-right">{session.count}</TableCell>
-                      <TableCell className="text-right">{session.duration}</TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex justify-end gap-2">
-                          <Button variant="ghost" size="icon" onClick={() => handleEditSession(session)}>
-                            <Pencil className="h-4 w-4" />
-                          </Button>
-                          <Button variant="ghost" size="icon" onClick={() => handleDeleteSession(session.id)}>
-                            <Trash className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                  {filteredSessions.length === 0 && (
+                  {filteredSessions.length > 0 ? (
+                    filteredSessions.map((session) => (
+                      <TableRow key={session.id}>
+                        <TableCell>{getStaffNameById(session.staffId)}</TableCell>
+                        <TableCell>{session.clinicType}</TableCell>
+                        <TableCell>{session.meetingType}</TableCell>
+                        <TableCell>{session.showStatus}</TableCell>
+                        <TableCell className="text-right">{session.count}</TableCell>
+                        <TableCell className="text-right">{session.duration}</TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex justify-end gap-2">
+                            <Button variant="ghost" size="icon" onClick={() => handleEditSession(session)}>
+                              <Pencil className="h-4 w-4" />
+                            </Button>
+                            <Button variant="ghost" size="icon" onClick={() => handleDeleteSession(session.id)}>
+                              <Trash className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  ) : (
                     <TableRow>
                       <TableCell colSpan={7} className="text-center py-4">No clinical sessions recorded for this period</TableCell>
                     </TableRow>
