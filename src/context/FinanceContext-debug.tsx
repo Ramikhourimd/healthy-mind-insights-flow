@@ -4,6 +4,7 @@
 
 import { useEffect } from "react";
 import { useFinance } from "./FinanceContext";
+import { ClinicType, MeetingType, ShowStatus } from "@/types/finance";
 
 export const FinanceContextDebugger = () => {
   const { addClinicalSession, clinicalSessions, updateFinancialSummary } = useFinance();
@@ -19,9 +20,9 @@ export const FinanceContextDebugger = () => {
     // Test adding a session
     const testSession = {
       staffId: "test-staff-id",
-      clinicType: "MCB",
-      meetingType: "Intake",
-      showStatus: "Show",
+      clinicType: "MCB" as ClinicType,
+      meetingType: "Intake" as MeetingType,
+      showStatus: "Show" as ShowStatus,
       count: 1,
       duration: 30,
       month: new Date().getMonth() + 1,

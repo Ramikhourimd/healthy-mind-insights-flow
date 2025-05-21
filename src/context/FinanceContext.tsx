@@ -13,6 +13,9 @@ import {
   FinancialSummary,
   TimePeriod,
   ClinicalSession,
+  ClinicType,
+  MeetingType,
+  ShowStatus,
 } from "../types/finance";
 
 // Initial sample data for settings
@@ -67,6 +70,7 @@ type FinanceContextType = {
   deleteClinicalSession: (id: string) => void;
   updateSettings: (newSettings: Partial<FinancialSettings>) => Promise<void>;
   calculateFinancialSummary: () => FinancialSummary;
+  updateFinancialSummary: () => void;
   addStaffMember: (staff: Omit<StaffMember, "id">) => Promise<void>;
   updateStaffMember: (staff: StaffMember) => Promise<void>;
   deleteStaffMember: (id: string) => Promise<void>;
@@ -873,6 +877,13 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({
     return summary;
   };
 
+  // Add the updateFinancialSummary function
+  const updateFinancialSummary = () => {
+    const summary = calculateFinancialSummary();
+    setFinancialSummary(summary);
+    console.log("Financial summary updated:", summary);
+  };
+
   return (
     <FinanceContext.Provider
       value={{
@@ -899,6 +910,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({
         deleteClinicalSession,
         updateSettings,
         calculateFinancialSummary,
+        updateFinancialSummary,
         addStaffMember,
         updateStaffMember,
         deleteStaffMember,
