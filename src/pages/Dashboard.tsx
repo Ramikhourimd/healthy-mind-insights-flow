@@ -9,18 +9,21 @@ import { FinanceContextDebugger } from "@/context/FinanceContext-debug";
 import { useFinance } from "@/context/FinanceContext";
 
 const Dashboard: React.FC = () => {
-  const { clinicalSessions } = useFinance();
+  const { clinicalSessions, updateFinancialSummary } = useFinance();
 
-  // Debug: Log sessions when the dashboard renders
+  // Debug: Log sessions when the dashboard renders and make sure summary is updated
   useEffect(() => {
     console.log("Dashboard rendered, total clinical sessions:", clinicalSessions.length);
-  }, [clinicalSessions]);
+    
+    // Force a financial summary update to reflect new sessions
+    updateFinancialSummary();
+  }, [clinicalSessions.length, updateFinancialSummary]);
 
   return (
     <div>
       <DashboardHeader />
       
-      <FinanceContextDebugger />
+      {/* <FinanceContextDebugger /> */}
       
       <FinancialOverview />
       

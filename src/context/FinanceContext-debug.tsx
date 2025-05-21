@@ -6,7 +6,7 @@ import { useEffect } from "react";
 import { useFinance } from "./FinanceContext";
 
 export const FinanceContextDebugger = () => {
-  const { addClinicalSession, clinicalSessions } = useFinance();
+  const { addClinicalSession, clinicalSessions, updateFinancialSummary } = useFinance();
   
   useEffect(() => {
     console.log("FinanceContext addClinicalSession check:");
@@ -29,8 +29,15 @@ export const FinanceContextDebugger = () => {
     };
     
     console.log("Will try to add test session:", testSession);
-    // Uncomment the next line to actually test the function
-    // addClinicalSession(testSession);
+    // Actually test the function - uncomment to activate
+    addClinicalSession(testSession);
+    
+    // Force summary update after adding sessions
+    setTimeout(() => {
+      console.log("Attempting to force financial summary update");
+      updateFinancialSummary();
+      console.log("After update attempt, sessions count:", clinicalSessions.length);
+    }, 500);
   }, []);
   
   return null;

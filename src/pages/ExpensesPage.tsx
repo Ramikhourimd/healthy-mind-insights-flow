@@ -43,7 +43,8 @@ const ExpensesPage: React.FC = () => {
     staffMembers,
     addClinicalSession,
     updateClinicalSession,
-    deleteClinicalSession
+    deleteClinicalSession,
+    updateFinancialSummary
   } = useFinance();
   
   // Filter overheads for current period
@@ -235,9 +236,23 @@ const ExpensesPage: React.FC = () => {
   // Handle bulk import of clinical sessions with improved logging
   const handleImportSessions = (sessions: Omit<ClinicalSession, "id">[]) => {
     console.log("Importing sessions in ExpensesPage:", sessions);
+    
+    // Use this flag to track if we've finished adding all sessions
+    let sessionsAdded = 0;
+    
     sessions.forEach(session => {
       console.log(`Adding session for staff ${session.staffId}:`, session);
       addClinicalSession(session);
+      sessionsAdded++;
+      
+      // If this is the last session, update financial summary
+      if (sessionsAdded === sessions.length) {
+        console.log("All sessions added, updating financial summary");
+        setTimeout(() => {
+          updateFinancialSummary();
+          console.log("Financial summary updated after import");
+        }, 100);
+      }
     });
   };
 

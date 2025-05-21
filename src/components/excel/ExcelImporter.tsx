@@ -200,14 +200,25 @@ const ExcelImporter: React.FC<ExcelImporterProps> = ({
   // Handle confirm import - add debugging log
   const handleConfirmImport = () => {
     console.log("Importing sessions:", extractedSessions);
+    
+    // Call the onImport function with the extracted sessions
     onImport(extractedSessions);
+    
+    // Close the dialog and reset the state
     setShowConfirmDialog(false);
     setFile(null);
-    toast({
-      title: "Data imported successfully",
-      description: `${extractedSessions.length} sessions were imported`,
-      variant: "default"
-    });
+    
+    // Add a slight delay before showing toast to allow processing
+    setTimeout(() => {
+      toast({
+        title: "Data imported successfully",
+        description: `${extractedSessions.length} sessions were imported`,
+        variant: "default"
+      });
+      
+      // Log after import is complete
+      console.log("Import completed, sessions should now be visible in the UI");
+    }, 300);
   };
 
   const handleStaffMappingChange = (excelName: string, systemStaffId: string) => {
