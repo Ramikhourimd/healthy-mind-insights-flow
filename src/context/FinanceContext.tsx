@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { supabase } from "../integrations/supabase/client";
 import { useToast } from "../hooks/use-toast";
@@ -30,6 +29,11 @@ const initialSettings: FinancialSettings = {
     level1: 0.15,
     level2: 0.1,
     level3: 0.05,
+  },
+  bonusHoursThresholds: {
+    level1: 120,
+    level2: 150,
+    level3: 180,
   },
   bonusPercentageTiers: [
     { minPoints: 0, maxPoints: 3, percentage: 0 },
@@ -147,7 +151,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({
   };
 
   // Load staff members from Supabase
-  const loadStaffMembers = async () => {
+  const const loadStaffMembers = async () => {
     try {
       const { data, error } = await supabase
         .from("staff_members")
@@ -281,6 +285,11 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({
             level1: Number(item.bonus_no_show_threshold_level1),
             level2: Number(item.bonus_no_show_threshold_level2),
             level3: Number(item.bonus_no_show_threshold_level3),
+          },
+          bonusHoursThresholds: {
+            level1: Number(item.bonus_hours_threshold_level1 || 120),
+            level2: Number(item.bonus_hours_threshold_level2 || 150),
+            level3: Number(item.bonus_hours_threshold_level3 || 180),
           },
           bonusPercentageTiers: initialSettings.bonusPercentageTiers, // Use initial tiers since they're not in DB
         };
@@ -753,6 +762,9 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({
         bonus_no_show_threshold_level1: updatedSettings.bonusNoShowThresholds.level1,
         bonus_no_show_threshold_level2: updatedSettings.bonusNoShowThresholds.level2,
         bonus_no_show_threshold_level3: updatedSettings.bonusNoShowThresholds.level3,
+        bonus_hours_threshold_level1: updatedSettings.bonusHoursThresholds.level1,
+        bonus_hours_threshold_level2: updatedSettings.bonusHoursThresholds.level2,
+        bonus_hours_threshold_level3: updatedSettings.bonusHoursThresholds.level3
       };
       
       // Get the current settings
