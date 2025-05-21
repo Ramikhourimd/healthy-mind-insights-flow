@@ -30,14 +30,16 @@ export const extractClinicalSessionsFromExcel = async (
         // Convert to JSON
         const jsonData = XLSX.utils.sheet_to_json(worksheet);
 
-        console.log('Extracted raw Excel data:', jsonData);
+        console.log('Excel parser: Extracted raw Excel data rows:', jsonData.length);
+        console.log('Excel parser: First few rows sample:', jsonData.slice(0, 2));
 
         // Log staff members for debugging
-        console.log('Available staff members:', Object.entries(staffMap).map(([id, name]) => ({ id, name })));
+        console.log('Excel parser: Available staff members:', Object.entries(staffMap).map(([id, name]) => ({ id, name })));
 
         // If we just need to extract unmapped staff, handle that first
         if (options.extractRawData) {
           const unmappedStaff = extractUnmappedStaffNames(jsonData, staffMap);
+          console.log('Excel parser: Found unmapped staff:', unmappedStaff);
           return resolve({ 
             rawData: jsonData,
             unmappedStaff
@@ -64,12 +66,14 @@ export const extractClinicalSessionsFromExcel = async (
         
         // First, show available columns in the Excel file for debugging
         if (jsonData.length > 0) {
-          console.log('Available columns in Excel file:', Object.keys(jsonData[0]));
+          console.log('Excel parser: Available columns in Excel file:', Object.keys(jsonData[0]));
         }
         
         // Process each row in the Excel data
         jsonData.forEach((row: any, index: number) => {
-          console.log(`Processing row ${index + 1}:`, row);
+          if (index < 3 || index % 50 === 0) {
+            console.log(`Excel parser: Processing row ${index + 1}:`, row);
+          }
           
           // Try to find the provider/staff name from different possible columns
           let staffName = '';
@@ -78,7 +82,7 @@ export const extractClinicalSessionsFromExcel = async (
           for (const key of hebrewMappings.resourceName) {
             if (row[key]) {
               staffName = String(row[key]).trim();
-              console.log(`Found staff name in resource column '${key}': "${staffName}"`);
+              console.log(`Excel parser: Found staff name in resource column '${key}': "${staffName}"`);
               break;
             }
           }
@@ -88,7 +92,7 @@ export const extractClinicalSessionsFromExcel = async (
             for (const key of hebrewMappings.providerName) {
               if (row[key]) {
                 staffName = String(row[key]).trim();
-                console.log(`Found staff name in provider column '${key}': "${staffName}"`);
+                console.log(`Excel parser: Found staff name in provider column '${key}': "${staffName}"`);
                 break;
               }
             }
@@ -96,7 +100,7 @@ export const extractClinicalSessionsFromExcel = async (
           
           // Skip rows where provider/staff name is empty
           if (!staffName) {
-            console.log('Skipping row with no provider/staff name:', row);
+            console.log('Excel parser: Skipping row with no provider/staff name:', row);
             return; // Skip this iteration
           }
           
@@ -106,17 +110,17 @@ export const extractClinicalSessionsFromExcel = async (
           // If manual mapping is enabled, try to find the staff ID in the manual mapping first
           if (options.manualMapping && options.excelToSystemMap && options.excelToSystemMap[staffName]) {
             staffId = options.excelToSystemMap[staffName];
-            console.log(`Using manual mapping for staff "${staffName}" -> ID: ${staffId} (${staffMap[staffId]})`);
+            console.log(`Excel parser: Using manual mapping for staff "${staffName}" -> ID: ${staffId} (${staffMap[staffId]})`);
           } else {
             // Otherwise use automatic matching
             staffId = findStaffIdByNameEnhanced(staffName, staffMap, nameVariations);
           }
           
           if (!staffId) {
-            console.warn(`Could not find staff ID for name: ${staffName}`);
+            console.warn(`Excel parser: Could not find staff ID for name: ${staffName}`);
             return; // Skip this iteration
           } else {
-            console.log(`Found staff ID for name "${staffName}": ${staffId} (${staffMap[staffId]})`);
+            console.log(`Excel parser: Found staff ID for name "${staffName}": ${staffId} (${staffMap[staffId]})`);
           }
           
           // Find service type
@@ -190,9 +194,9 @@ export const extractClinicalSessionsFromExcel = async (
             const match = fullName.match(/[MH]{1,2}[-_\s]?([A-Za-z]{2,5})[-_\s]/i);
             if (match && match[1]) {
               clinicType = mapClinicType(match[1]);
-              console.log(`Extracted clinic type from "${fullName}": ${clinicType}`);
+              console.log(`Excel parser: Extracted clinic type from "${fullName}": ${clinicType}`);
             } else {
-              console.log(`Could not extract clinic type from "${fullName}", using default: ${clinicType}`);
+              console.log(`Excel parser: Could not extract clinic type from "${fullName}", using default: ${clinicType}`);
             }
           }
           
@@ -235,26 +239,29 @@ export const extractClinicalSessionsFromExcel = async (
             year: currentYear
           });
           
-          console.log(`Successfully processed session: Staff=${staffMap[staffId]}, Clinic=${clinicType}, Type=${meetingType}`);
+          if (index < 5 || index % 50 === 0) {
+            console.log(`Excel parser: Successfully processed session: Staff=${staffMap[staffId]}, Clinic=${clinicType}, Type=${meetingType}`);
+          }
         });
         
         // Aggregate sessions with the same properties
         const aggregatedSessions = aggregateSessions(sessions);
         
-        console.log('Mapped and aggregated sessions:', aggregatedSessions);
+        console.log('Excel parser: Mapped and aggregated sessions:', aggregatedSessions);
         
         if (aggregatedSessions.length === 0) {
-          console.warn('No sessions were found after mapping and aggregation. Check column names and staff mapping.');
+          console.warn('Excel parser: No sessions were found after mapping and aggregation. Check column names and staff mapping.');
         }
         
         resolve(aggregatedSessions);
       } catch (error) {
-        console.error('Error parsing Excel file:', error);
+        console.error('Excel parser error:', error);
         reject(error);
       }
     };
     
     reader.onerror = (error) => {
+      console.error('Excel parser file reader error:', error);
       reject(error);
     };
     

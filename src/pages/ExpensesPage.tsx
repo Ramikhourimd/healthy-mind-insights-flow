@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -242,7 +241,7 @@ const ExpensesPage: React.FC = () => {
 
   // Handle bulk import of clinical sessions with improved handling
   const handleImportSessions = (sessions: Omit<ClinicalSession, "id">[]) => {
-    console.log("Importing sessions in ExpensesPage:", sessions);
+    console.log("ExpensesPage: Importing sessions:", sessions);
     
     if (sessions.length === 0) {
       toast({
@@ -253,34 +252,37 @@ const ExpensesPage: React.FC = () => {
       return;
     }
     
-    // Counter for progress tracking
-    let sessionsAdded = 0;
-    const totalSessions = sessions.length;
-    
-    // Add each session one by one
-    sessions.forEach(session => {
-      console.log(`Adding session for staff ${session.staffId}:`, session);
-      addClinicalSession(session);
-      sessionsAdded++;
-    });
-    
-    // Force update financial summary after all sessions are imported
-    setTimeout(() => {
-      updateFinancialSummary();
-      console.log("Financial summary updated after import");
+    try {
+      // Add each session
+      sessions.forEach(session => {
+        console.log(`Adding session for staff ${getStaffNameById(session.staffId)}:`, session);
+        addClinicalSession(session);
+      });
       
-      // Get latest sessions filtered for current period
+      // Force update financial summary after all sessions are imported
+      console.log("Updating financial summary after import");
+      updateFinancialSummary();
+      
+      // Get latest sessions filtered for current period and update display
       const currentSessions = clinicalSessions.filter(
         s => s.month === currentPeriod.month && s.year === currentPeriod.year
       );
+      console.log("Updated sessions after import:", currentSessions);
       setDisplayedSessions(currentSessions);
       
       toast({
         title: "Import Successful",
-        description: `${sessionsAdded} clinical sessions were imported`,
+        description: `${sessions.length} clinical sessions were imported`,
         variant: "default"
       });
-    }, 300);
+    } catch (error) {
+      console.error("Error during import:", error);
+      toast({
+        title: "Import Error",
+        description: "An error occurred during import",
+        variant: "destructive"
+      });
+    }
   };
 
   return (

@@ -122,6 +122,7 @@ const ExcelImporter: React.FC<ExcelImporterProps> = ({
     }, 150);
     
     try {
+      console.log('Excel import: Starting with staff members:', staffMembers.length);
       console.log('Staff map for import:', staffMap);
       
       // First extract raw data to identify staff names
@@ -132,6 +133,9 @@ const ExcelImporter: React.FC<ExcelImporterProps> = ({
         currentPeriod.year,
         { extractRawData: true }
       );
+      
+      console.log('Excel import: Raw data extracted, found rows:', rawData.length);
+      console.log('Excel import: Unmapped staff:', unmappedStaff);
       
       setRawExcelData(rawData);
       
@@ -159,6 +163,8 @@ const ExcelImporter: React.FC<ExcelImporterProps> = ({
         currentPeriod.month,
         currentPeriod.year
       );
+      
+      console.log('Excel import: Extracted sessions data:', extractedData);
       
       clearInterval(progressInterval);
       setProcessingProgress(100);
@@ -197,9 +203,18 @@ const ExcelImporter: React.FC<ExcelImporterProps> = ({
     }
   };
 
-  // Handle confirm import - add debugging log
+  // Handle confirm import - add more debugging logs
   const handleConfirmImport = () => {
-    console.log("Importing sessions:", extractedSessions);
+    console.log("Excel import: Importing sessions:", extractedSessions);
+    
+    if (extractedSessions.length === 0) {
+      toast({
+        title: "Import Error",
+        description: "No sessions to import",
+        variant: "destructive"
+      });
+      return;
+    }
     
     // Call the onImport function with the extracted sessions
     onImport(extractedSessions);
@@ -217,7 +232,7 @@ const ExcelImporter: React.FC<ExcelImporterProps> = ({
       });
       
       // Log after import is complete
-      console.log("Import completed, sessions should now be visible in the UI");
+      console.log("Excel import: Import completed, sessions should now be visible in the UI");
     }, 300);
   };
 
@@ -269,7 +284,7 @@ const ExcelImporter: React.FC<ExcelImporterProps> = ({
         }
       );
       
-      console.log("Extracted sessions with manual mapping:", extractedData);
+      console.log("Excel import: Extracted sessions with manual mapping:", extractedData);
       setExtractedSessions(extractedData);
       
       if (extractedData.length > 0) {
