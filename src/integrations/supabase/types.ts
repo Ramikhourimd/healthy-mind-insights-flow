@@ -217,6 +217,9 @@ export type Database = {
           bonus_csat_threshold_level1: number
           bonus_csat_threshold_level2: number
           bonus_csat_threshold_level3: number
+          bonus_hours_threshold_level1: number | null
+          bonus_hours_threshold_level2: number | null
+          bonus_hours_threshold_level3: number | null
           bonus_no_show_threshold_level1: number
           bonus_no_show_threshold_level2: number
           bonus_no_show_threshold_level3: number
@@ -231,6 +234,9 @@ export type Database = {
           bonus_csat_threshold_level1: number
           bonus_csat_threshold_level2: number
           bonus_csat_threshold_level3: number
+          bonus_hours_threshold_level1?: number | null
+          bonus_hours_threshold_level2?: number | null
+          bonus_hours_threshold_level3?: number | null
           bonus_no_show_threshold_level1: number
           bonus_no_show_threshold_level2: number
           bonus_no_show_threshold_level3: number
@@ -245,6 +251,9 @@ export type Database = {
           bonus_csat_threshold_level1?: number
           bonus_csat_threshold_level2?: number
           bonus_csat_threshold_level3?: number
+          bonus_hours_threshold_level1?: number | null
+          bonus_hours_threshold_level2?: number | null
+          bonus_hours_threshold_level3?: number | null
           bonus_no_show_threshold_level1?: number
           bonus_no_show_threshold_level2?: number
           bonus_no_show_threshold_level3?: number

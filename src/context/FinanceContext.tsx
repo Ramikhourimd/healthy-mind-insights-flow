@@ -151,7 +151,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({
   };
 
   // Load staff members from Supabase
-  const const loadStaffMembers = async () => {
+  const loadStaffMembers = async () => {
     try {
       const { data, error } = await supabase
         .from("staff_members")
