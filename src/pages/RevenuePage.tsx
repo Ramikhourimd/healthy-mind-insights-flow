@@ -12,19 +12,25 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Plus, Pencil, Trash } from "lucide-react";
+import { Plus, Pencil, Trash, Loader2 } from "lucide-react";
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
   DialogFooter,
-  DialogTrigger,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 
 const RevenuePage: React.FC = () => {
-  const { revenueSources, addRevenueSource, updateRevenueSource, deleteRevenueSource, currentPeriod } = useFinance();
+  const { 
+    revenueSources, 
+    addRevenueSource, 
+    updateRevenueSource, 
+    deleteRevenueSource, 
+    currentPeriod,
+    isLoading 
+  } = useFinance();
   
   // Filter sources for current period
   const filteredSources = revenueSources.filter(
@@ -69,12 +75,12 @@ const RevenuePage: React.FC = () => {
   };
 
   // Handle form submission
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (isEditing) {
-      updateRevenueSource(currentSource);
+      await updateRevenueSource(currentSource);
     } else {
-      addRevenueSource({
+      await addRevenueSource({
         name: currentSource.name,
         quantity: currentSource.quantity,
         ratePerUnit: currentSource.ratePerUnit,
@@ -137,42 +143,59 @@ const RevenuePage: React.FC = () => {
           <CardTitle className="text-lg font-medium">Revenue Sources</CardTitle>
         </CardHeader>
         <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Source Name</TableHead>
-                <TableHead className="text-right">Quantity</TableHead>
-                <TableHead className="text-right">Rate Per Unit</TableHead>
-                <TableHead className="text-right">Total</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredSources.map((source) => (
-                <TableRow key={source.id}>
-                  <TableCell>{source.name}</TableCell>
-                  <TableCell className="text-right">{source.quantity}</TableCell>
-                  <TableCell className="text-right">{formatCurrency(source.ratePerUnit)}</TableCell>
-                  <TableCell className="text-right">{formatCurrency(source.quantity * source.ratePerUnit)}</TableCell>
-                  <TableCell className="text-right">
-                    <div className="flex justify-end gap-2">
-                      <Button variant="ghost" size="icon" onClick={() => handleEdit(source)}>
-                        <Pencil className="h-4 w-4" />
-                      </Button>
-                      <Button variant="ghost" size="icon" onClick={() => handleDelete(source.id)}>
-                        <Trash className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </TableCell>
+          {isLoading ? (
+            <div className="flex justify-center items-center p-8">
+              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+              <span className="ml-2 text-muted-foreground">Loading revenue data...</span>
+            </div>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Source Name</TableHead>
+                  <TableHead className="text-right">Quantity</TableHead>
+                  <TableHead className="text-right">Rate Per Unit</TableHead>
+                  <TableHead className="text-right">Total</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
-              ))}
-              <TableRow>
-                <TableCell colSpan={3} className="font-bold">Total Revenue</TableCell>
-                <TableCell className="text-right font-bold">{formatCurrency(totalRevenue)}</TableCell>
-                <TableCell></TableCell>
-              </TableRow>
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {filteredSources.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                      No revenue sources found for this period. Click "Add Revenue Source" to get started.
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  <>
+                    {filteredSources.map((source) => (
+                      <TableRow key={source.id}>
+                        <TableCell>{source.name}</TableCell>
+                        <TableCell className="text-right">{source.quantity}</TableCell>
+                        <TableCell className="text-right">{formatCurrency(source.ratePerUnit)}</TableCell>
+                        <TableCell className="text-right">{formatCurrency(source.quantity * source.ratePerUnit)}</TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex justify-end gap-2">
+                            <Button variant="ghost" size="icon" onClick={() => handleEdit(source)}>
+                              <Pencil className="h-4 w-4" />
+                            </Button>
+                            <Button variant="ghost" size="icon" onClick={() => handleDelete(source.id)}>
+                              <Trash className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                    <TableRow>
+                      <TableCell colSpan={3} className="font-bold">Total Revenue</TableCell>
+                      <TableCell className="text-right font-bold">{formatCurrency(totalRevenue)}</TableCell>
+                      <TableCell></TableCell>
+                    </TableRow>
+                  </>
+                )}
+              </TableBody>
+            </Table>
+          )}
         </CardContent>
       </Card>
 

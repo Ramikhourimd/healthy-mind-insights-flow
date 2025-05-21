@@ -57,6 +57,59 @@ export type Database = {
         }
         Relationships: []
       }
+      clinical_staff_rates: {
+        Row: {
+          admin_rate: number
+          availability_retainer_rate: number
+          created_at: string
+          effective_date: string
+          follow_up_session_rate: number
+          id: string
+          intake_session_rate: number
+          no_show_follow_up_rate: number
+          no_show_intake_rate: number
+          staff_id: string
+          training_rate: number
+          updated_at: string
+        }
+        Insert: {
+          admin_rate: number
+          availability_retainer_rate: number
+          created_at?: string
+          effective_date?: string
+          follow_up_session_rate: number
+          id?: string
+          intake_session_rate: number
+          no_show_follow_up_rate: number
+          no_show_intake_rate: number
+          staff_id: string
+          training_rate: number
+          updated_at?: string
+        }
+        Update: {
+          admin_rate?: number
+          availability_retainer_rate?: number
+          created_at?: string
+          effective_date?: string
+          follow_up_session_rate?: number
+          id?: string
+          intake_session_rate?: number
+          no_show_follow_up_rate?: number
+          no_show_intake_rate?: number
+          staff_id?: string
+          training_rate?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "clinical_staff_rates_staff_id_fkey"
+            columns: ["staff_id"]
+            isOneToOne: false
+            referencedRelation: "staff_members"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       course_registrations: {
         Row: {
           comments: string | null
@@ -159,6 +212,81 @@ export type Database = {
         }
         Relationships: []
       }
+      financial_settings: {
+        Row: {
+          bonus_csat_threshold_level1: number
+          bonus_csat_threshold_level2: number
+          bonus_csat_threshold_level3: number
+          bonus_no_show_threshold_level1: number
+          bonus_no_show_threshold_level2: number
+          bonus_no_show_threshold_level3: number
+          created_at: string
+          id: string
+          target_clinical_payroll_to_revenue_ratio: number
+          target_total_payroll_to_revenue_ratio: number
+          updated_at: string
+          vat_rate: number
+        }
+        Insert: {
+          bonus_csat_threshold_level1: number
+          bonus_csat_threshold_level2: number
+          bonus_csat_threshold_level3: number
+          bonus_no_show_threshold_level1: number
+          bonus_no_show_threshold_level2: number
+          bonus_no_show_threshold_level3: number
+          created_at?: string
+          id?: string
+          target_clinical_payroll_to_revenue_ratio: number
+          target_total_payroll_to_revenue_ratio: number
+          updated_at?: string
+          vat_rate: number
+        }
+        Update: {
+          bonus_csat_threshold_level1?: number
+          bonus_csat_threshold_level2?: number
+          bonus_csat_threshold_level3?: number
+          bonus_no_show_threshold_level1?: number
+          bonus_no_show_threshold_level2?: number
+          bonus_no_show_threshold_level3?: number
+          created_at?: string
+          id?: string
+          target_clinical_payroll_to_revenue_ratio?: number
+          target_total_payroll_to_revenue_ratio?: number
+          updated_at?: string
+          vat_rate?: number
+        }
+        Relationships: []
+      }
+      fixed_overheads: {
+        Row: {
+          created_at: string
+          id: string
+          month: number
+          monthly_cost: number
+          name: string
+          updated_at: string
+          year: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          month: number
+          monthly_cost: number
+          name: string
+          updated_at?: string
+          year: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          month?: number
+          monthly_cost?: number
+          name?: string
+          updated_at?: string
+          year?: number
+        }
+        Relationships: []
+      }
       "Landing page": {
         Row: {
           "alternative date": string | null
@@ -258,6 +386,72 @@ export type Database = {
           updated_at?: string
           user_id?: string
           value?: number
+        }
+        Relationships: []
+      }
+      revenue_sources: {
+        Row: {
+          created_at: string
+          id: string
+          month: number
+          name: string
+          quantity: number
+          rate_per_unit: number
+          updated_at: string
+          year: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          month: number
+          name: string
+          quantity: number
+          rate_per_unit: number
+          updated_at?: string
+          year: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          month?: number
+          name?: string
+          quantity?: number
+          rate_per_unit?: number
+          updated_at?: string
+          year?: number
+        }
+        Relationships: []
+      }
+      staff_members: {
+        Row: {
+          active: boolean
+          created_at: string
+          end_date: string | null
+          id: string
+          name: string
+          role: string
+          start_date: string | null
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          end_date?: string | null
+          id?: string
+          name: string
+          role: string
+          start_date?: string | null
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          end_date?: string | null
+          id?: string
+          name?: string
+          role?: string
+          start_date?: string | null
+          updated_at?: string
         }
         Relationships: []
       }
