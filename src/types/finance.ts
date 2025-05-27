@@ -1,3 +1,4 @@
+
 // Types for the HealthyMind Clinic Financial Dashboard
 
 // Revenue Source types
@@ -63,31 +64,23 @@ export type ClinicalStaffWork = {
   quarterlyGrossFees: number; // For bonus calculation
 };
 
-// Rates for clinical staff - updated with adult/child rates
+// Rates for clinical staff - updated structure
 export type ClinicalStaffRates = {
   id: string;
   staffId: string;
-  // Legacy rates (kept for backward compatibility)
-  intakeSessionRate: number;
-  followUpSessionRate: number;
-  noShowIntakeRate: number;
-  noShowFollowUpRate: number;
-  // New adult rates
-  adultIntakeRate?: number;
-  adultFollowUpRate?: number;
-  adultNoShowIntakeRate?: number;
-  adultNoShowFollowUpRate?: number;
-  // New child rates
-  childIntakeRate?: number;
-  childFollowUpRate?: number;
-  childNoShowIntakeRate?: number;
-  childNoShowFollowUpRate?: number;
-  // Other rates
-  availabilityRetainerRate: number;
-  adminRate: number;
-  trainingRate: number;
-  contractTypeIdentifier?: string;
-  effectiveDate: string;
+  adult_intake_rate: number;
+  adult_follow_up_rate: number;
+  adult_no_show_intake_rate: number;
+  adult_no_show_follow_up_rate: number;
+  child_intake_rate: number; // For specific child rates like Ahmad/Uriel
+  child_follow_up_rate: number; // For specific child rates
+  child_no_show_intake_rate: number;
+  child_no_show_follow_up_rate: number;
+  admin_rate: number;
+  training_rate: number;
+  availability_retainer_rate: number; // For exceptions like Ilia
+  effective_date: string;
+  contract_type_identifier?: string; // Optional: for very unique contracts
 };
 
 // Admin staff financial data - updated to match our usage
