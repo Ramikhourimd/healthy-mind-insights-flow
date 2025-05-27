@@ -1020,10 +1020,10 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }
   };
 
-  // Update financial summary function (placeholder)
+  // Update financial summary function
   const updateFinancialSummary = () => {
     console.log('Financial summary update triggered');
-    // This is a placeholder for now - would calculate based on current data
+    
     const filteredRevenue = revenueSources.filter(
       source => source.month === currentPeriod.month && source.year === currentPeriod.year
     );
@@ -1033,11 +1033,64 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     const filteredAdminStaff = adminStaffFinancials.filter(
       staff => staff.month === currentPeriod.month && staff.year === currentPeriod.year
     );
+    const filteredSessions = clinicalSessions.filter(
+      session => session.month === currentPeriod.month && session.year === currentPeriod.year
+    );
 
     const totalRevenue = filteredRevenue.reduce((sum, source) => sum + (source.quantity * source.ratePerUnit), 0);
     const totalFixedOverheads = filteredOverheads.reduce((sum, overhead) => sum + overhead.monthlyCost, 0);
     const totalAdminCosts = filteredAdminStaff.reduce((sum, staff) => sum + staff.baseSalary + staff.commission, 0);
-    const totalClinicalCosts = 0; // Would calculate from sessions and rates
+    
+    // Calculate clinical costs properly using the same logic as ExpensesPage
+    let totalClinicalCosts = 0;
+    
+    filteredSessions.forEach(session => {
+      const staffRates = clinicalStaffRates.find(r => r.staffId === session.staffId);
+      if (staffRates) {
+        const sessionCount = Number(session.count) || 0;
+        if (sessionCount > 0) {
+          let rate = 0;
+          const serviceAgeGroup = session.serviceAgeGroup || "Adult";
+          
+          // Select the appropriate rate based on service age group, meeting type and show status
+          if (session.showStatus === "Show") {
+            if (session.meetingType === "Intake") {
+              if (serviceAgeGroup === "Adult") {
+                rate = Number(staffRates.adult_intake_rate) || 0;
+              } else {
+                rate = Number(staffRates.child_intake_rate) || 0;
+              }
+            } else if (session.meetingType === "FollowUp") {
+              if (serviceAgeGroup === "Adult") {
+                rate = Number(staffRates.adult_follow_up_rate) || 0;
+              } else {
+                rate = Number(staffRates.child_follow_up_rate) || 0;
+              }
+            }
+          } else if (session.showStatus === "NoShow") {
+            if (session.meetingType === "Intake") {
+              if (serviceAgeGroup === "Adult") {
+                rate = Number(staffRates.adult_no_show_intake_rate) || 0;
+              } else {
+                rate = Number(staffRates.child_no_show_intake_rate) || 0;
+              }
+            } else if (session.meetingType === "FollowUp") {
+              if (serviceAgeGroup === "Adult") {
+                rate = Number(staffRates.adult_no_show_follow_up_rate) || 0;
+              } else {
+                rate = Number(staffRates.child_no_show_follow_up_rate) || 0;
+              }
+            }
+          }
+          
+          const sessionCost = rate * sessionCount;
+          totalClinicalCosts += sessionCost;
+        }
+      }
+    });
+    
+    console.log('FinanceContext calculated clinical costs:', totalClinicalCosts);
+
     const totalExpenses = totalClinicalCosts + totalAdminCosts + totalFixedOverheads;
     const operatingProfit = totalRevenue - totalExpenses;
 
