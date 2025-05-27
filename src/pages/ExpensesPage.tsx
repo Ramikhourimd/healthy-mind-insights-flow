@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -29,7 +28,7 @@ import {
   SelectTrigger, 
   SelectValue 
 } from "@/components/ui/select";
-import { ClinicType, MeetingType, ShowStatus, ClinicalSession } from "@/types/finance";
+import { ClinicType, MeetingType, ShowStatus, ClinicalSession, AdminStaffFinancials } from "@/types/finance";
 import ExcelImporter from "@/components/excel/ExcelImporter";
 import { useToast } from "@/components/ui/use-toast";
 
@@ -58,7 +57,11 @@ const ExpensesPage: React.FC = () => {
     addClinicalSession,
     updateClinicalSession,
     deleteClinicalSession,
-    updateFinancialSummary
+    updateFinancialSummary,
+    adminStaffFinancials,
+    addAdminStaff,
+    updateAdminStaff,
+    deleteAdminStaff
   } = useFinance();
   
   // State to track sessions
@@ -92,7 +95,7 @@ const ExpensesPage: React.FC = () => {
   );
 
   // Filter admin staff for current period
-  const filteredAdminStaff = adminStaff.filter(
+  const filteredAdminStaff = adminStaffFinancials.filter(
     staff => staff.month === currentPeriod.month && staff.year === currentPeriod.year
   );
 
@@ -135,7 +138,7 @@ const ExpensesPage: React.FC = () => {
   // State for the admin staff form
   const [isAdminDialogOpen, setIsAdminDialogOpen] = useState(false);
   const [isAdminEditing, setIsAdminEditing] = useState(false);
-  const [currentAdminStaff, setCurrentAdminStaff] = useState<Omit<AdminStaff, "id"> & { id?: string }>({
+  const [currentAdminStaff, setCurrentAdminStaff] = useState<Omit<AdminStaffFinancials, "id"> & { id?: string }>({
     name: "",
     role: "",
     baseSalary: 0,
@@ -227,31 +230,33 @@ const ExpensesPage: React.FC = () => {
   };
 
   // Handle admin staff form submission
-  const handleAdminStaffSubmit = (e: React.FormEvent) => {
+  const handleAdminStaffSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (isAdminEditing && currentAdminStaff.id) {
-      setAdminStaff(prev => prev.map(staff => 
-        staff.id === currentAdminStaff.id ? { ...currentAdminStaff, id: currentAdminStaff.id } as AdminStaff : staff
-      ));
-      toast({
-        title: "Admin Staff Updated",
-        description: `${currentAdminStaff.name} has been updated.`,
-      });
-    } else {
-      const newId = `admin-${Date.now()}`;
-      const newStaff: AdminStaff = {
-        ...currentAdminStaff,
-        id: newId,
-        month: currentPeriod.month,
-        year: currentPeriod.year,
-      };
-      setAdminStaff(prev => [...prev, newStaff]);
-      toast({
-        title: "Admin Staff Added",
-        description: `${currentAdminStaff.name} has been added.`,
-      });
+    try {
+      if (isAdminEditing && currentAdminStaff.id) {
+        await updateAdminStaff({
+          id: currentAdminStaff.id,
+          name: currentAdminStaff.name,
+          role: currentAdminStaff.role,
+          baseSalary: currentAdminStaff.baseSalary,
+          commission: currentAdminStaff.commission,
+          month: currentPeriod.month,
+          year: currentPeriod.year,
+        });
+      } else {
+        await addAdminStaff({
+          name: currentAdminStaff.name,
+          role: currentAdminStaff.role,
+          baseSalary: currentAdminStaff.baseSalary,
+          commission: currentAdminStaff.commission,
+          month: currentPeriod.month,
+          year: currentPeriod.year,
+        });
+      }
+      handleCloseAdminDialog();
+    } catch (error) {
+      console.error("Error with admin staff operation:", error);
     }
-    handleCloseAdminDialog();
   };
 
   // Edit an overhead
@@ -269,7 +274,7 @@ const ExpensesPage: React.FC = () => {
   };
 
   // Edit admin staff
-  const handleEditAdminStaff = (staff: AdminStaff) => {
+  const handleEditAdminStaff = (staff: AdminStaffFinancials) => {
     setCurrentAdminStaff(staff);
     setIsAdminEditing(true);
     setIsAdminDialogOpen(true);
@@ -290,14 +295,9 @@ const ExpensesPage: React.FC = () => {
   };
 
   // Delete admin staff
-  const handleDeleteAdminStaff = (id: string) => {
+  const handleDeleteAdminStaff = async (id: string) => {
     if (confirm("Are you sure you want to delete this admin staff member?")) {
-      setAdminStaff(prev => prev.filter(staff => staff.id !== id));
-      toast({
-        title: "Admin Staff Deleted",
-        description: "The admin staff member has been removed.",
-        variant: "destructive"
-      });
+      await deleteAdminStaff(id);
     }
   };
 

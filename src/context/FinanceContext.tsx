@@ -78,6 +78,9 @@ type FinanceContextType = {
   addStaffRates: (rates: Omit<ClinicalStaffRates, "id">) => Promise<void>;
   updateStaffRates: (rates: ClinicalStaffRates) => Promise<void>;
   getStaffRates: (staffId: string) => Promise<ClinicalStaffRates | null>;
+  addAdminStaff: (staff: Omit<AdminStaffFinancials, "id">) => Promise<void>;
+  updateAdminStaff: (staff: AdminStaffFinancials) => Promise<void>;
+  deleteAdminStaff: (id: string) => Promise<void>;
   isLoading: boolean;
 };
 
@@ -137,6 +140,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({
         loadClinicalStaffRates(),
         loadRevenueSources(),
         loadFixedOverheads(),
+        loadAdminStaffFinancials(),
         loadFinancialSettings(),
       ]);
       
@@ -261,6 +265,35 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({
       }
     } catch (error) {
       console.error("Error loading fixed overheads:", error);
+    }
+  };
+
+  // Load admin staff financials from Supabase
+  const loadAdminStaffFinancials = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("admin_staff_financials")
+        .select("*")
+        .eq("month", currentPeriod.month)
+        .eq("year", currentPeriod.year)
+        .order("name");
+
+      if (error) throw error;
+
+      if (data) {
+        const mappedAdminStaff: AdminStaffFinancials[] = data.map(item => ({
+          id: item.id,
+          name: item.name,
+          role: item.role,
+          baseSalary: Number(item.base_salary),
+          commission: Number(item.commission),
+          month: item.month,
+          year: item.year,
+        }));
+        setAdminStaffFinancials(mappedAdminStaff);
+      }
+    } catch (error) {
+      console.error("Error loading admin staff financials:", error);
     }
   };
 
@@ -750,6 +783,116 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({
     }
   };
 
+  // CRUD functions for admin staff financials
+  const addAdminStaff = async (staff: Omit<AdminStaffFinancials, "id">) => {
+    try {
+      const { data, error } = await supabase
+        .from("admin_staff_financials")
+        .insert({
+          name: staff.name,
+          role: staff.role,
+          base_salary: staff.baseSalary,
+          commission: staff.commission,
+          month: staff.month,
+          year: staff.year
+        })
+        .select();
+
+      if (error) throw error;
+
+      if (data && data.length > 0) {
+        const newAdminStaff: AdminStaffFinancials = {
+          id: data[0].id,
+          name: data[0].name,
+          role: data[0].role,
+          baseSalary: Number(data[0].base_salary),
+          commission: Number(data[0].commission),
+          month: data[0].month,
+          year: data[0].year,
+        };
+        
+        setAdminStaffFinancials(prev => [...prev, newAdminStaff]);
+        setFinancialSummary(calculateFinancialSummary());
+        
+        toast({
+          title: "Admin Staff Added",
+          description: `${staff.name} has been added.`,
+        });
+      }
+    } catch (error) {
+      console.error("Error adding admin staff:", error);
+      toast({
+        title: "Error",
+        description: "Failed to add admin staff",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const updateAdminStaff = async (staff: AdminStaffFinancials) => {
+    try {
+      const { error } = await supabase
+        .from("admin_staff_financials")
+        .update({
+          name: staff.name,
+          role: staff.role,
+          base_salary: staff.baseSalary,
+          commission: staff.commission,
+          month: staff.month,
+          year: staff.year,
+          updated_at: new Date().toISOString()
+        })
+        .eq("id", staff.id);
+
+      if (error) throw error;
+
+      setAdminStaffFinancials(prev => prev.map(s => s.id === staff.id ? staff : s));
+      setFinancialSummary(calculateFinancialSummary());
+      
+      toast({
+        title: "Admin Staff Updated",
+        description: `${staff.name} has been updated.`,
+      });
+    } catch (error) {
+      console.error("Error updating admin staff:", error);
+      toast({
+        title: "Error",
+        description: "Failed to update admin staff",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const deleteAdminStaff = async (id: string) => {
+    try {
+      const { error } = await supabase
+        .from("admin_staff_financials")
+        .delete()
+        .eq("id", id);
+
+      if (error) throw error;
+
+      const staffToDelete = adminStaffFinancials.find(s => s.id === id);
+      setAdminStaffFinancials(prev => prev.filter(s => s.id !== id));
+      setFinancialSummary(calculateFinancialSummary());
+      
+      if (staffToDelete) {
+        toast({
+          title: "Admin Staff Deleted",
+          description: `${staffToDelete.name} has been removed.`,
+          variant: "destructive"
+        });
+      }
+    } catch (error) {
+      console.error("Error deleting admin staff:", error);
+      toast({
+        title: "Error",
+        description: "Failed to delete admin staff",
+        variant: "destructive",
+      });
+    }
+  };
+
   // Update settings
   const updateSettings = async (newSettings: Partial<FinancialSettings>) => {
     try {
@@ -934,6 +1077,9 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({
         addStaffRates,
         updateStaffRates,
         getStaffRates,
+        addAdminStaff,
+        updateAdminStaff,
+        deleteAdminStaff,
         isLoading,
       }}
     >
