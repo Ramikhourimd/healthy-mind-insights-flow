@@ -1,5 +1,6 @@
+
 import { createContext, useContext, useEffect, useState } from "react";
-import { supabase } from "../utils/supabaseClient";
+import { supabase } from "@/integrations/supabase/client";
 import { ClinicalSession, ClinicType, MeetingType, ShowStatus, ServiceType } from "@/types/finance";
 
 const FinanceContext = createContext(null);
@@ -30,7 +31,7 @@ export const FinanceProvider = ({ children }) => {
         clinicType: row.clinic_type as ClinicType,
         meetingType: row.meeting_type as MeetingType,
         showStatus: row.show_status as ShowStatus,
-        serviceAgeGroup: (row.service_age_group || 'Adult') as ServiceType, // Default to Adult if not set
+        serviceAgeGroup: (row.service_age_group || 'Adult') as ServiceType,
         count: row.count,
         duration: row.duration,
         month: row.month,
@@ -42,6 +43,12 @@ export const FinanceProvider = ({ children }) => {
       console.error('Failed to fetch clinical sessions:', error);
       return [];
     }
+  };
+
+  // Update financial summary (placeholder function)
+  const updateFinancialSummary = () => {
+    console.log('Financial summary update triggered');
+    // This is a placeholder - actual implementation would calculate financial metrics
   };
 
   // Add a new clinical session
@@ -56,7 +63,7 @@ export const FinanceProvider = ({ children }) => {
           clinic_type: sessionData.clinicType,
           meeting_type: sessionData.meetingType,
           show_status: sessionData.showStatus,
-          service_age_group: sessionData.serviceAgeGroup || 'Adult', // Default to Adult
+          service_age_group: sessionData.serviceAgeGroup || 'Adult',
           count: sessionData.count,
           duration: sessionData.duration,
           month: sessionData.month,
@@ -111,7 +118,7 @@ export const FinanceProvider = ({ children }) => {
         clinic_type: session.clinicType,
         meeting_type: session.meetingType,
         show_status: session.showStatus,
-        service_age_group: session.serviceAgeGroup || 'Adult', // Default to Adult
+        service_age_group: session.serviceAgeGroup || 'Adult',
         count: session.count,
         duration: session.duration,
         month: session.month,
@@ -160,7 +167,13 @@ export const FinanceProvider = ({ children }) => {
   };
 
   return (
-    <FinanceContext.Provider value={{ clinicalSessions, fetchClinicalSessions, addClinicalSession, importClinicalSessions }}>
+    <FinanceContext.Provider value={{ 
+      clinicalSessions, 
+      fetchClinicalSessions, 
+      addClinicalSession, 
+      importClinicalSessions,
+      updateFinancialSummary
+    }}>
       {children}
     </FinanceContext.Provider>
   );
