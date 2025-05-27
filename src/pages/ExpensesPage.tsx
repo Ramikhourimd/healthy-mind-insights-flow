@@ -426,6 +426,35 @@ const ExpensesPage: React.FC = () => {
 
   const clinicalBreakdown = calculateClinicalStaffBreakdown();
 
+  // Add the missing handleImportSessions function
+  const handleImportSessions = async (sessions: any[]) => {
+    try {
+      for (const session of sessions) {
+        await addClinicalSession({
+          staffId: session.staffId,
+          clinicType: session.clinicType,
+          meetingType: session.meetingType,
+          showStatus: session.showStatus,
+          count: session.count,
+          duration: session.duration,
+          month: currentPeriod.month,
+          year: currentPeriod.year,
+        });
+      }
+      toast({
+        title: "Import Successful",
+        description: `${sessions.length} clinical sessions imported successfully.`,
+      });
+    } catch (error) {
+      console.error("Error importing sessions:", error);
+      toast({
+        title: "Import Failed",
+        description: "There was an error importing the sessions. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
   return (
     <div>
       <div className="flex justify-between items-center mb-6">
