@@ -11,7 +11,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Plus, Pencil, Trash } from "lucide-react";
+import { Plus, Pencil, Trash, ChevronDown, ChevronRight } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -31,6 +31,11 @@ import {
 import { ClinicType, MeetingType, ShowStatus, ClinicalSession, AdminStaffFinancials } from "@/types/finance";
 import ExcelImporter from "@/components/excel/ExcelImporter";
 import { useToast } from "@/components/ui/use-toast";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 
 // Add admin staff type
 type AdminStaff = {
@@ -54,6 +59,7 @@ const ExpensesPage: React.FC = () => {
     financialSummary,
     clinicalSessions,
     staffMembers,
+    clinicalStaffRates,
     addClinicalSession,
     updateClinicalSession,
     deleteClinicalSession,
@@ -63,6 +69,11 @@ const ExpensesPage: React.FC = () => {
     updateAdminStaff,
     deleteAdminStaff
   } = useFinance();
+  
+  // State for collapsible sections
+  const [clinicalBreakdownOpen, setClinicalBreakdownOpen] = useState(false);
+  const [adminBreakdownOpen, setAdminBreakdownOpen] = useState(false);
+  const [overheadBreakdownOpen, setOverheadBreakdownOpen] = useState(false);
   
   // State to track sessions
   const [displayedSessions, setDisplayedSessions] = useState<ClinicalSession[]>([]);
@@ -363,46 +374,57 @@ const ExpensesPage: React.FC = () => {
     return staff ? staff.name : "Unknown Staff";
   };
 
-  // Handle bulk import of clinical sessions with improved handling
-  const handleImportSessions = async (sessions: Omit<ClinicalSession, "id">[]) => {
-    console.log("ExpensesPage: Importing sessions:", sessions);
+  // Calculate detailed clinical staff breakdown
+  const calculateClinicalStaffBreakdown = () => {
+    const breakdown: { [staffId: string]: { name: string; sessions: any[]; totalCost: number } } = {};
     
-    if (sessions.length === 0) {
-      toast({
-        title: "Import Error",
-        description: "No valid sessions found to import",
-        variant: "destructive"
-      });
-      return;
-    }
-    
-    try {
-      // Add each session
-      for (const session of sessions) {
-        console.log(`Adding session for staff ${getStaffNameById(session.staffId)}:`, session);
-        await addClinicalSession(session);
+    filteredSessions.forEach(session => {
+      if (!breakdown[session.staffId]) {
+        breakdown[session.staffId] = {
+          name: getStaffNameById(session.staffId),
+          sessions: [],
+          totalCost: 0
+        };
       }
       
-      console.log("Updating financial summary after import");
-      updateFinancialSummary();
+      const staffRates = clinicalStaffRates.find(r => r.staffId === session.staffId);
+      let sessionCost = 0;
       
-      toast({
-        title: "Import Successful",
-        description: `${sessions.length} clinical sessions were imported`,
-        variant: "default"
+      if (staffRates) {
+        if (session.showStatus === "Show") {
+          if (session.meetingType === "Intake") {
+            sessionCost = staffRates.intakeSessionRate * session.count;
+          } else if (session.meetingType === "FollowUp") {
+            sessionCost = staffRates.followUpSessionRate * session.count;
+          }
+        } else if (session.showStatus === "NoShow") {
+          if (session.meetingType === "Intake") {
+            sessionCost = staffRates.noShowIntakeRate * session.count;
+          } else if (session.meetingType === "FollowUp") {
+            sessionCost = staffRates.noShowFollowUpRate * session.count;
+          }
+        }
+      } else {
+        const defaultRate = session.meetingType === "Intake" ? 600 : 450;
+        const noShowMultiplier = session.showStatus === "NoShow" ? 0.5 : 1;
+        sessionCost = defaultRate * session.count * noShowMultiplier;
+      }
+      
+      breakdown[session.staffId].sessions.push({
+        ...session,
+        cost: sessionCost,
+        rate: sessionCost / session.count
       });
-    } catch (error) {
-      console.error("Error during import:", error);
-      toast({
-        title: "Import Error",
-        description: "An error occurred during import",
-        variant: "destructive"
-      });
-    }
+      breakdown[session.staffId].totalCost += sessionCost;
+    });
+    
+    return breakdown;
   };
 
   // Calculate total admin costs
   const totalAdminCosts = filteredAdminStaff.reduce((sum, staff) => sum + staff.baseSalary + staff.commission, 0);
+
+  const clinicalBreakdown = calculateClinicalStaffBreakdown();
 
   return (
     <div>
@@ -428,41 +450,133 @@ const ExpensesPage: React.FC = () => {
             <CardHeader>
               <CardTitle className="text-lg font-medium">Expense Summary</CardTitle>
             </CardHeader>
-            <CardContent>
+            <CardContent className="space-y-4">
               <Table>
                 <TableHeader>
                   <TableRow>
                     <TableHead>Category</TableHead>
                     <TableHead className="text-right">Amount</TableHead>
                     <TableHead className="text-right">% of Total</TableHead>
+                    <TableHead className="w-10"></TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
+                  {/* Clinical Staff Costs */}
                   <TableRow>
-                    <TableCell>Clinical Staff Costs</TableCell>
+                    <TableCell>
+                      <Collapsible open={clinicalBreakdownOpen} onOpenChange={setClinicalBreakdownOpen}>
+                        <CollapsibleTrigger className="flex items-center gap-2 hover:text-blue-600">
+                          {clinicalBreakdownOpen ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                          Clinical Staff Costs
+                        </CollapsibleTrigger>
+                      </Collapsible>
+                    </TableCell>
                     <TableCell className="text-right">{formatCurrency(financialSummary.totalClinicalCosts)}</TableCell>
                     <TableCell className="text-right">
                       {(financialSummary.totalClinicalCosts / financialSummary.totalExpenses * 100).toFixed(1)}%
                     </TableCell>
+                    <TableCell></TableCell>
                   </TableRow>
+                  
+                  {/* Clinical Staff Breakdown */}
+                  <Collapsible open={clinicalBreakdownOpen} onOpenChange={setClinicalBreakdownOpen}>
+                    <CollapsibleContent>
+                      {Object.entries(clinicalBreakdown).map(([staffId, data]) => (
+                        <TableRow key={staffId} className="bg-gray-50">
+                          <TableCell className="pl-8 text-sm text-gray-600">
+                            {data.name} ({data.sessions.length} sessions)
+                          </TableCell>
+                          <TableCell className="text-right text-sm">{formatCurrency(data.totalCost)}</TableCell>
+                          <TableCell className="text-right text-sm">
+                            {(data.totalCost / financialSummary.totalClinicalCosts * 100).toFixed(1)}%
+                          </TableCell>
+                          <TableCell></TableCell>
+                        </TableRow>
+                      ))}
+                    </CollapsibleContent>
+                  </Collapsible>
+
+                  {/* Administrative Staff Costs */}
                   <TableRow>
-                    <TableCell>Administrative Staff Costs</TableCell>
+                    <TableCell>
+                      <Collapsible open={adminBreakdownOpen} onOpenChange={setAdminBreakdownOpen}>
+                        <CollapsibleTrigger className="flex items-center gap-2 hover:text-blue-600">
+                          {adminBreakdownOpen ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                          Administrative Staff Costs
+                        </CollapsibleTrigger>
+                      </Collapsible>
+                    </TableCell>
                     <TableCell className="text-right">{formatCurrency(totalAdminCosts)}</TableCell>
                     <TableCell className="text-right">
                       {(totalAdminCosts / financialSummary.totalExpenses * 100).toFixed(1)}%
                     </TableCell>
+                    <TableCell></TableCell>
                   </TableRow>
+                  
+                  {/* Admin Staff Breakdown */}
+                  <Collapsible open={adminBreakdownOpen} onOpenChange={setAdminBreakdownOpen}>
+                    <CollapsibleContent>
+                      {filteredAdminStaff.map((staff) => (
+                        <TableRow key={staff.id} className="bg-gray-50">
+                          <TableCell className="pl-8 text-sm text-gray-600">
+                            {staff.name} - {staff.role}
+                          </TableCell>
+                          <TableCell className="text-right text-sm">
+                            {formatCurrency(staff.baseSalary + staff.commission)}
+                            <div className="text-xs text-gray-500">
+                              Salary: {formatCurrency(staff.baseSalary)} + Commission: {formatCurrency(staff.commission)}
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-right text-sm">
+                            {((staff.baseSalary + staff.commission) / totalAdminCosts * 100).toFixed(1)}%
+                          </TableCell>
+                          <TableCell></TableCell>
+                        </TableRow>
+                      ))}
+                    </CollapsibleContent>
+                  </Collapsible>
+
+                  {/* Fixed Overheads */}
                   <TableRow>
-                    <TableCell>Fixed Overheads</TableCell>
+                    <TableCell>
+                      <Collapsible open={overheadBreakdownOpen} onOpenChange={setOverheadBreakdownOpen}>
+                        <CollapsibleTrigger className="flex items-center gap-2 hover:text-blue-600">
+                          {overheadBreakdownOpen ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                          Fixed Overheads
+                        </CollapsibleTrigger>
+                      </Collapsible>
+                    </TableCell>
                     <TableCell className="text-right">{formatCurrency(financialSummary.totalFixedOverheads)}</TableCell>
                     <TableCell className="text-right">
                       {(financialSummary.totalFixedOverheads / financialSummary.totalExpenses * 100).toFixed(1)}%
                     </TableCell>
+                    <TableCell></TableCell>
                   </TableRow>
-                  <TableRow>
+                  
+                  {/* Fixed Overheads Breakdown */}
+                  <Collapsible open={overheadBreakdownOpen} onOpenChange={setOverheadBreakdownOpen}>
+                    <CollapsibleContent>
+                      {filteredOverheads.map((overhead) => (
+                        <TableRow key={overhead.id} className="bg-gray-50">
+                          <TableCell className="pl-8 text-sm text-gray-600">
+                            {overhead.name}
+                          </TableCell>
+                          <TableCell className="text-right text-sm">{formatCurrency(overhead.monthlyCost)}</TableCell>
+                          <TableCell className="text-right text-sm">
+                            {(overhead.monthlyCost / financialSummary.totalFixedOverheads * 100).toFixed(1)}%
+                          </TableCell>
+                          <TableCell></TableCell>
+                        </TableRow>
+                      ))}
+                    </CollapsibleContent>
+                  </Collapsible>
+
+                  {/* Total */}
+                  <TableRow className="border-t-2 border-gray-300">
                     <TableCell className="font-bold">Total Expenses</TableCell>
                     <TableCell className="text-right font-bold">{formatCurrency(financialSummary.totalExpenses)}</TableCell>
                     <TableCell className="text-right font-bold">100%</TableCell>
+                    <TableCell></TableCell>
                   </TableRow>
                 </TableBody>
               </Table>
