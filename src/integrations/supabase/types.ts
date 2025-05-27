@@ -146,6 +146,62 @@ export type Database = {
           },
         ]
       }
+      clinical_staff_work: {
+        Row: {
+          admin_hours: number
+          availability_retainer_hours: number
+          created_at: string
+          follow_up_units_completed: number
+          id: string
+          intakes_completed: number
+          month: number
+          no_show_hours: number
+          quarterly_gross_fees: number
+          staff_id: string
+          training_hours: number
+          updated_at: string
+          year: number
+        }
+        Insert: {
+          admin_hours?: number
+          availability_retainer_hours?: number
+          created_at?: string
+          follow_up_units_completed?: number
+          id?: string
+          intakes_completed?: number
+          month: number
+          no_show_hours?: number
+          quarterly_gross_fees?: number
+          staff_id: string
+          training_hours?: number
+          updated_at?: string
+          year: number
+        }
+        Update: {
+          admin_hours?: number
+          availability_retainer_hours?: number
+          created_at?: string
+          follow_up_units_completed?: number
+          id?: string
+          intakes_completed?: number
+          month?: number
+          no_show_hours?: number
+          quarterly_gross_fees?: number
+          staff_id?: string
+          training_hours?: number
+          updated_at?: string
+          year?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "clinical_staff_work_staff_id_fkey"
+            columns: ["staff_id"]
+            isOneToOne: false
+            referencedRelation: "staff_members"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       course_registrations: {
         Row: {
           comments: string | null

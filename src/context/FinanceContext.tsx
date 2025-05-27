@@ -69,6 +69,9 @@ type FinanceContextType = {
   addClinicalSession: (sessionData: Omit<ClinicalSession, "id">) => string;
   updateClinicalSession: (session: ClinicalSession) => void;
   deleteClinicalSession: (id: string) => void;
+  addClinicalStaffWork: (work: Omit<ClinicalStaffWork, "id">) => Promise<void>;
+  updateClinicalStaffWork: (work: ClinicalStaffWork) => Promise<void>;
+  deleteClinicalStaffWork: (id: string) => Promise<void>;
   updateSettings: (newSettings: Partial<FinancialSettings>) => Promise<void>;
   calculateFinancialSummary: () => FinancialSummary;
   updateFinancialSummary: () => void;
@@ -138,6 +141,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({
       await Promise.all([
         loadStaffMembers(),
         loadClinicalStaffRates(),
+        loadClinicalStaffWork(),
         loadRevenueSources(),
         loadFixedOverheads(),
         loadAdminStaffFinancials(),
@@ -212,6 +216,39 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({
       }
     } catch (error) {
       console.error("Error loading clinical staff rates:", error);
+    }
+  };
+
+  // Load clinical staff work from Supabase
+  const loadClinicalStaffWork = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("clinical_staff_work")
+        .select("*")
+        .eq("month", currentPeriod.month)
+        .eq("year", currentPeriod.year)
+        .order("created_at");
+
+      if (error) throw error;
+
+      if (data) {
+        const mappedWork: ClinicalStaffWork[] = data.map(item => ({
+          id: item.id,
+          staffId: item.staff_id,
+          month: item.month,
+          year: item.year,
+          intakesCompleted: item.intakes_completed,
+          followUpUnitsCompleted: item.follow_up_units_completed,
+          noShowHours: Number(item.no_show_hours),
+          availabilityRetainerHours: Number(item.availability_retainer_hours),
+          adminHours: Number(item.admin_hours),
+          trainingHours: Number(item.training_hours),
+          quarterlyGrossFees: Number(item.quarterly_gross_fees),
+        }));
+        setClinicalStaffWork(mappedWork);
+      }
+    } catch (error) {
+      console.error("Error loading clinical staff work:", error);
     }
   };
 
@@ -893,6 +930,122 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({
     }
   };
 
+  // CRUD functions for clinical staff work
+  const addClinicalStaffWork = async (work: Omit<ClinicalStaffWork, "id">) => {
+    try {
+      const { data, error } = await supabase
+        .from("clinical_staff_work")
+        .insert({
+          staff_id: work.staffId,
+          month: work.month,
+          year: work.year,
+          intakes_completed: work.intakesCompleted,
+          follow_up_units_completed: work.followUpUnitsCompleted,
+          no_show_hours: work.noShowHours,
+          availability_retainer_hours: work.availabilityRetainerHours,
+          admin_hours: work.adminHours,
+          training_hours: work.trainingHours,
+          quarterly_gross_fees: work.quarterlyGrossFees
+        })
+        .select();
+
+      if (error) throw error;
+
+      if (data && data.length > 0) {
+        const newWork: ClinicalStaffWork = {
+          id: data[0].id,
+          staffId: data[0].staff_id,
+          month: data[0].month,
+          year: data[0].year,
+          intakesCompleted: data[0].intakes_completed,
+          followUpUnitsCompleted: data[0].follow_up_units_completed,
+          noShowHours: Number(data[0].no_show_hours),
+          availabilityRetainerHours: Number(data[0].availability_retainer_hours),
+          adminHours: Number(data[0].admin_hours),
+          trainingHours: Number(data[0].training_hours),
+          quarterlyGrossFees: Number(data[0].quarterly_gross_fees),
+        };
+        
+        setClinicalStaffWork(prev => [...prev, newWork]);
+        
+        toast({
+          title: "Clinical Work Added",
+          description: "Clinical staff work data has been added.",
+        });
+      }
+    } catch (error) {
+      console.error("Error adding clinical staff work:", error);
+      toast({
+        title: "Error",
+        description: "Failed to add clinical staff work",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const updateClinicalStaffWork = async (work: ClinicalStaffWork) => {
+    try {
+      const { error } = await supabase
+        .from("clinical_staff_work")
+        .update({
+          staff_id: work.staffId,
+          month: work.month,
+          year: work.year,
+          intakes_completed: work.intakesCompleted,
+          follow_up_units_completed: work.followUpUnitsCompleted,
+          no_show_hours: work.noShowHours,
+          availability_retainer_hours: work.availabilityRetainerHours,
+          admin_hours: work.adminHours,
+          training_hours: work.trainingHours,
+          quarterly_gross_fees: work.quarterlyGrossFees,
+          updated_at: new Date().toISOString()
+        })
+        .eq("id", work.id);
+
+      if (error) throw error;
+
+      setClinicalStaffWork(prev => prev.map(w => w.id === work.id ? work : w));
+      
+      toast({
+        title: "Clinical Work Updated",
+        description: "Clinical staff work data has been updated.",
+      });
+    } catch (error) {
+      console.error("Error updating clinical staff work:", error);
+      toast({
+        title: "Error",
+        description: "Failed to update clinical staff work",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const deleteClinicalStaffWork = async (id: string) => {
+    try {
+      const { error } = await supabase
+        .from("clinical_staff_work")
+        .delete()
+        .eq("id", id);
+
+      if (error) throw error;
+
+      setClinicalStaffWork(prev => prev.filter(w => w.id !== id));
+      
+      toast({
+        title: "Clinical Work Deleted",
+        description: "Clinical staff work data has been removed.",
+        variant: "destructive"
+      });
+    } catch (error) {
+      console.error("Error deleting clinical staff work:", error);
+      toast({
+        title: "Error",
+        description: "Failed to delete clinical staff work",
+        variant: "destructive",
+      });
+    }
+  };
+
   // Update settings
   const updateSettings = async (newSettings: Partial<FinancialSettings>) => {
     try {
@@ -1001,6 +1154,18 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({
         overhead.year === currentPeriod.year
     );
 
+    const currentAdminStaff = adminStaffFinancials.filter(
+      (staff) =>
+        staff.month === currentPeriod.month &&
+        staff.year === currentPeriod.year
+    );
+
+    const currentClinicalWork = clinicalStaffWork.filter(
+      (work) =>
+        work.month === currentPeriod.month &&
+        work.year === currentPeriod.year
+    );
+
     // Calculate total revenue
     const totalRevenue = currentRevenueSources.reduce(
       (sum, source) => sum + source.quantity * source.ratePerUnit,
@@ -1013,10 +1178,24 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({
       0
     );
 
-    // For the demo, we'll use approximations for other values
-    // In a real implementation, these would be calculated from actual staff work data
-    const totalClinicalCosts = totalRevenue * 0.5; // 50% of revenue as an estimate
-    const totalAdminCosts = totalRevenue * 0.15; // 15% of revenue as an estimate
+    // Calculate total admin costs
+    const totalAdminCosts = currentAdminStaff.reduce(
+      (sum, staff) => sum + staff.baseSalary + staff.commission,
+      0
+    );
+
+    // Calculate total clinical costs from actual work data
+    let totalClinicalCosts = 0;
+    currentClinicalWork.forEach(work => {
+      // This is a simplified calculation - in reality you'd multiply by rates
+      // For now, we'll use the quarterly gross fees as an approximation
+      totalClinicalCosts += work.quarterlyGrossFees / 3; // Convert quarterly to monthly
+    });
+
+    // If no clinical work data, use approximation
+    if (totalClinicalCosts === 0) {
+      totalClinicalCosts = totalRevenue * 0.5; // 50% of revenue as an estimate
+    }
     
     const totalExpenses = totalClinicalCosts + totalAdminCosts + totalFixedOverheads;
     
@@ -1068,6 +1247,9 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({
         addClinicalSession,
         updateClinicalSession,
         deleteClinicalSession,
+        addClinicalStaffWork,
+        updateClinicalStaffWork,
+        deleteClinicalStaffWork,
         updateSettings,
         calculateFinancialSummary,
         updateFinancialSummary,
