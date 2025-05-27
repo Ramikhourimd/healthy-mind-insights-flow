@@ -36,6 +36,7 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
+import { getSessionCost } from "@/utils/getSessionCost";
 
 // Add admin staff type
 type AdminStaff = {
@@ -121,17 +122,11 @@ const ExpensesPage: React.FC = () => {
     };
   }, [fixedOverheads, adminStaffFinancials, clinicalSessions, currentPeriod]);
 
-  // Memoized calculations to prevent dependency issues
+  // Use financial summary from context instead of recalculating
   const calculations = useMemo(() => {
     const { filteredOverheads, filteredAdminStaff, filteredSessions } = filteredData;
 
-    console.log("Calculating with filtered data:", {
-      overheads: filteredOverheads.length,
-      adminStaff: filteredAdminStaff.length,
-      sessions: filteredSessions.length
-    });
-
-    // Calculate clinical staff breakdown
+    // Calculate clinical staff breakdown using the shared utility
     const clinicalBreakdown: { [staffId: string]: { name: string; sessions: any[]; totalCost: number } } = {};
     
     filteredSessions.forEach(session => {
@@ -145,65 +140,36 @@ const ExpensesPage: React.FC = () => {
       }
       
       const staffRates = clinicalStaffRates.find(r => r.staffId === session.staffId);
-      let sessionCost = 0;
+      const sessionCost = getSessionCost(session, staffRates);
       
-      if (staffRates) {
-        const baseRate = session.meetingType === "Intake" 
-          ? Number(staffRates.intakeSessionRate) || 0
-          : Number(staffRates.followUpSessionRate) || 0;
-        
-        const noShowRate = session.meetingType === "Intake"
-          ? Number(staffRates.noShowIntakeRate) || 0
-          : Number(staffRates.noShowFollowUpRate) || 0;
-        
-        sessionCost = session.showStatus === "Show" 
-          ? baseRate * (Number(session.count) || 0)
-          : noShowRate * (Number(session.count) || 0);
-      } else {
-        // Default rates if no staff rates found
-        const defaultRate = session.meetingType === "Intake" ? 600 : 450;
-        const noShowMultiplier = session.showStatus === "NoShow" ? 0.5 : 1;
-        sessionCost = defaultRate * (Number(session.count) || 0) * noShowMultiplier;
+      if (sessionCost === 0 && !staffRates) {
+        // Show toast for missing rates instead of using fallback
+        toast({
+          title: "Missing Staff Rates",
+          description: `No payment rates found for ${clinicalBreakdown[session.staffId].name}. Please add rates in Staff Management.`,
+          variant: "destructive",
+        });
       }
+      
+      const rate = (Number(session.count) || 0) > 0 ? sessionCost / (Number(session.count) || 1) : 0;
       
       clinicalBreakdown[session.staffId].sessions.push({
         ...session,
         cost: sessionCost,
-        rate: (Number(session.count) || 0) > 0 ? sessionCost / (Number(session.count) || 1) : 0
+        rate: rate
       });
       clinicalBreakdown[session.staffId].totalCost += sessionCost;
     });
     
-    // Calculate totals
-    const totalClinicalCosts = Object.values(clinicalBreakdown).reduce(
-      (sum, staff) => sum + (staff.totalCost || 0), 0
-    );
-    
-    const totalAdminCosts = filteredAdminStaff.reduce(
-      (sum, staff) => sum + (Number(staff.baseSalary) || 0) + (Number(staff.commission) || 0), 0
-    );
-    
-    const totalFixedOverheads = filteredOverheads.reduce(
-      (sum, overhead) => sum + (Number(overhead.monthlyCost) || 0), 0
-    );
-    
-    const totalExpenses = totalClinicalCosts + totalAdminCosts + totalFixedOverheads;
-
-    console.log("Calculated totals:", {
-      totalClinicalCosts,
-      totalAdminCosts,
-      totalFixedOverheads,
-      totalExpenses
-    });
-
+    // Use values from financialSummary instead of recalculating
     return {
       clinicalBreakdown,
-      totalClinicalCosts,
-      totalAdminCosts,
-      totalFixedOverheads,
-      totalExpenses
+      totalClinicalCosts: financialSummary.totalClinicalCosts,
+      totalAdminCosts: financialSummary.totalAdminCosts,
+      totalFixedOverheads: financialSummary.totalFixedOverheads,
+      totalExpenses: financialSummary.totalExpenses
     };
-  }, [filteredData, staffMembers, clinicalStaffRates]);
+  }, [filteredData, staffMembers, clinicalStaffRates, financialSummary, toast]);
 
   // State for the overhead form
   const [isOverheadDialogOpen, setIsOverheadDialogOpen] = useState(false);

@@ -1,0 +1,71 @@
+
+import { describe, it, expect } from 'vitest';
+import { getSessionCost } from '../utils/getSessionCost';
+import { ClinicalSession, ClinicalStaffRates, ClinicType, MeetingType, ShowStatus } from '../types/finance';
+
+describe('getSessionCost', () => {
+  const mockStaffRates: ClinicalStaffRates = {
+    id: 'test-rate-id',
+    staffId: 'test-staff-id',
+    intakeSessionRate: 600,
+    followUpSessionRate: 450,
+    noShowIntakeRate: 300,
+    noShowFollowUpRate: 225,
+    availabilityRetainerRate: 150,
+    adminRate: 250,
+    trainingRate: 250,
+    effectiveDate: '2024-01-01',
+  };
+
+  const createMockSession = (
+    meetingType: MeetingType,
+    showStatus: ShowStatus,
+    count: number = 1
+  ): ClinicalSession => ({
+    id: 'test-session-id',
+    staffId: 'test-staff-id',
+    clinicType: 'MCB' as ClinicType,
+    meetingType,
+    showStatus,
+    count,
+    duration: 60,
+    month: 4,
+    year: 2025,
+  });
+
+  it('should calculate cost for intake session with show status', () => {
+    const session = createMockSession('Intake', 'Show', 2);
+    const cost = getSessionCost(session, mockStaffRates);
+    expect(cost).toBe(1200); // 600 * 2
+  });
+
+  it('should calculate cost for follow-up session with show status', () => {
+    const session = createMockSession('FollowUp', 'Show', 3);
+    const cost = getSessionCost(session, mockStaffRates);
+    expect(cost).toBe(1350); // 450 * 3
+  });
+
+  it('should calculate cost for intake session with no-show status', () => {
+    const session = createMockSession('Intake', 'NoShow', 1);
+    const cost = getSessionCost(session, mockStaffRates);
+    expect(cost).toBe(300); // 300 * 1
+  });
+
+  it('should calculate cost for follow-up session with no-show status', () => {
+    const session = createMockSession('FollowUp', 'NoShow', 2);
+    const cost = getSessionCost(session, mockStaffRates);
+    expect(cost).toBe(450); // 225 * 2
+  });
+
+  it('should return 0 when staff rates are missing', () => {
+    const session = createMockSession('Intake', 'Show', 1);
+    const cost = getSessionCost(session, null);
+    expect(cost).toBe(0);
+  });
+
+  it('should return 0 when session count is 0 or negative', () => {
+    const session = createMockSession('Intake', 'Show', 0);
+    const cost = getSessionCost(session, mockStaffRates);
+    expect(cost).toBe(0);
+  });
+});

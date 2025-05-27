@@ -18,6 +18,7 @@ import {
   MeetingType,
   ShowStatus,
 } from "../types/finance";
+import { getSessionCost } from "../utils/getSessionCost";
 
 // Initial sample data for settings
 const initialSettings: FinancialSettings = {
@@ -1304,39 +1305,18 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({
       0
     );
 
-    // Calculate clinical staff costs from actual sessions
+    // Calculate clinical staff costs using the shared utility
     let totalClinicalCosts = 0;
     
     currentSessions.forEach(session => {
-      // Find the staff member's rates
       const staffRates = clinicalStaffRates.find(r => r.staffId === session.staffId);
+      const sessionCost = getSessionCost(session, staffRates);
       
-      if (staffRates) {
-        let sessionCost = 0;
-        
-        if (session.showStatus === "Show") {
-          // Calculate cost for sessions that were attended
-          if (session.meetingType === "Intake") {
-            sessionCost = staffRates.intakeSessionRate * session.count;
-          } else if (session.meetingType === "FollowUp") {
-            sessionCost = staffRates.followUpSessionRate * session.count;
-          }
-        } else if (session.showStatus === "NoShow") {
-          // Calculate cost for no-shows (typically lower rate)
-          if (session.meetingType === "Intake") {
-            sessionCost = staffRates.noShowIntakeRate * session.count;
-          } else if (session.meetingType === "FollowUp") {
-            sessionCost = staffRates.noShowFollowUpRate * session.count;
-          }
-        }
-        
-        totalClinicalCosts += sessionCost;
-      } else {
-        // If no rates found, use default estimation
-        const defaultRate = session.meetingType === "Intake" ? 600 : 450;
-        const noShowMultiplier = session.showStatus === "NoShow" ? 0.5 : 1;
-        totalClinicalCosts += defaultRate * session.count * noShowMultiplier;
+      if (sessionCost === 0 && staffRates === undefined) {
+        console.warn(`Missing rates for staff ID: ${session.staffId}`);
       }
+      
+      totalClinicalCosts += sessionCost;
     });
     
     const totalExpenses = totalClinicalCosts + totalAdminCosts + totalFixedOverheads;

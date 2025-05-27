@@ -309,6 +309,35 @@ const ExcelImporter: React.FC<ExcelImporterProps> = ({
     }
   };
 
+  const validateAndParseData = (data: any[]) => {
+    return data.map((row, index) => {
+      const staffMember = staffMembers.find(s => s.name === row.staff);
+      if (!staffMember) {
+        console.error(`Staff member not found for row ${index + 1}: ${row.staff}`);
+        return null;
+      }
+
+      const clinicType = row.clinicType || row.clinic;
+      const meetingType = row.meetingType || row.meeting;
+      const showStatus = row.showStatus || row.status;
+
+      // Ensure all numeric values are properly converted
+      const count = Number(row.count) || 1;
+      const duration = Number(row.duration) || 60;
+
+      return {
+        staffId: staffMember.id,
+        clinicType: clinicType as ClinicType,
+        meetingType: meetingType as MeetingType,
+        showStatus: showStatus as ShowStatus,
+        count: count, // Ensure it's a number
+        duration: duration, // Ensure it's a number
+        month: currentPeriod.month,
+        year: currentPeriod.year,
+      };
+    });
+  };
+
   const getStaffNameById = (id: string) => {
     const staff = staffMembers.find(s => s.id === id);
     return staff ? staff.name : "Unknown Staff";
