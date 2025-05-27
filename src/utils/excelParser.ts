@@ -1,5 +1,5 @@
 import * as XLSX from 'xlsx';
-import { ClinicalSession, ClinicType, MeetingType, ShowStatus } from '@/types/finance';
+import { ClinicalSession, ClinicType, MeetingType, ShowStatus, ServiceType } from '@/types/finance';
 
 interface ExtractionOptions {
   manualMapping?: boolean;
@@ -225,6 +225,10 @@ export const extractClinicalSessionsFromExcel = async (
             }
           }
           
+          // Determine service age group - default to Adult for now
+          // In the future, this could be extracted from service type or other fields
+          const serviceAgeGroup: ServiceType = 'Adult';
+          
           // Count is always 1 for individual sessions
           const count = 1;
           
@@ -233,6 +237,7 @@ export const extractClinicalSessionsFromExcel = async (
             clinicType: clinicType as ClinicType,
             meetingType: meetingType as MeetingType,
             showStatus: showStatus as ShowStatus,
+            serviceAgeGroup,
             count: count,
             duration: duration,
             month: currentMonth,
@@ -240,7 +245,7 @@ export const extractClinicalSessionsFromExcel = async (
           });
           
           if (index < 5 || index % 50 === 0) {
-            console.log(`Excel parser: Successfully processed session: Staff=${staffMap[staffId]}, Clinic=${clinicType}, Type=${meetingType}`);
+            console.log(`Excel parser: Successfully processed session: Staff=${staffMap[staffId]}, Clinic=${clinicType}, Type=${meetingType}, AgeGroup=${serviceAgeGroup}`);
           }
         });
         
@@ -491,7 +496,7 @@ const aggregateSessions = (sessions: Omit<ClinicalSession, "id">[]) => {
   const sessionMap = new Map<string, Omit<ClinicalSession, "id">>();
   
   sessions.forEach(session => {
-    const key = `${session.staffId}-${session.clinicType}-${session.meetingType}-${session.showStatus}-${session.duration}`;
+    const key = `${session.staffId}-${session.clinicType}-${session.meetingType}-${session.showStatus}-${session.serviceAgeGroup}-${session.duration}`;
     
     if (sessionMap.has(key)) {
       const existing = sessionMap.get(key)!;
