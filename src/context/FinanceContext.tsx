@@ -586,20 +586,20 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
         .from('clinical_staff_rates')
         .insert([{
           staff_id: ratesData.staffId,
-          adult_intake_rate: ratesData.adult_intake_rate,
-          adult_follow_up_rate: ratesData.adult_follow_up_rate,
-          adult_no_show_intake_rate: ratesData.adult_no_show_intake_rate,
-          adult_no_show_follow_up_rate: ratesData.adult_no_show_follow_up_rate,
-          child_intake_rate: ratesData.child_intake_rate,
-          child_follow_up_rate: ratesData.child_follow_up_rate,
-          child_no_show_intake_rate: ratesData.child_no_show_intake_rate,
-          child_no_show_follow_up_rate: ratesData.child_no_show_follow_up_rate,
-          availability_retainer_rate: ratesData.availability_retainer_rate,
-          admin_rate: ratesData.admin_rate,
-          training_rate: ratesData.training_rate,
-          contract_type_identifier: ratesData.contract_type_identifier,
-          effective_date: ratesData.effective_date,
-          // Add required legacy fields with default values
+          adult_intake_rate: ratesData.adult_intake_rate || 0,
+          adult_follow_up_rate: ratesData.adult_follow_up_rate || 0,
+          adult_no_show_intake_rate: ratesData.adult_no_show_intake_rate || 0,
+          adult_no_show_follow_up_rate: ratesData.adult_no_show_follow_up_rate || 0,
+          child_intake_rate: ratesData.child_intake_rate || 0,
+          child_follow_up_rate: ratesData.child_follow_up_rate || 0,
+          child_no_show_intake_rate: ratesData.child_no_show_intake_rate || 0,
+          child_no_show_follow_up_rate: ratesData.child_no_show_follow_up_rate || 0,
+          availability_retainer_rate: ratesData.availability_retainer_rate || 0,
+          admin_rate: ratesData.admin_rate || 0,
+          training_rate: ratesData.training_rate || 0,
+          contract_type_identifier: ratesData.contract_type_identifier || null,
+          effective_date: ratesData.effective_date || new Date().toISOString(),
+          // Legacy fields for backward compatibility
           intake_session_rate: ratesData.adult_intake_rate || 0,
           follow_up_session_rate: ratesData.adult_follow_up_rate || 0,
           no_show_intake_rate: ratesData.adult_no_show_intake_rate || 0,
@@ -613,17 +613,17 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
       const newRates: ClinicalStaffRates = {
         id: data.id,
         staffId: data.staff_id,
-        adult_intake_rate: data.adult_intake_rate,
-        adult_follow_up_rate: data.adult_follow_up_rate,
-        adult_no_show_intake_rate: data.adult_no_show_intake_rate,
-        adult_no_show_follow_up_rate: data.adult_no_show_follow_up_rate,
-        child_intake_rate: data.child_intake_rate,
-        child_follow_up_rate: data.child_follow_up_rate,
-        child_no_show_intake_rate: data.child_no_show_intake_rate,
-        child_no_show_follow_up_rate: data.child_no_show_follow_up_rate,
-        availability_retainer_rate: data.availability_retainer_rate,
-        admin_rate: data.admin_rate,
-        training_rate: data.training_rate,
+        adult_intake_rate: data.adult_intake_rate || 0,
+        adult_follow_up_rate: data.adult_follow_up_rate || 0,
+        adult_no_show_intake_rate: data.adult_no_show_intake_rate || 0,
+        adult_no_show_follow_up_rate: data.adult_no_show_follow_up_rate || 0,
+        child_intake_rate: data.child_intake_rate || 0,
+        child_follow_up_rate: data.child_follow_up_rate || 0,
+        child_no_show_intake_rate: data.child_no_show_intake_rate || 0,
+        child_no_show_follow_up_rate: data.child_no_show_follow_up_rate || 0,
+        availability_retainer_rate: data.availability_retainer_rate || 0,
+        admin_rate: data.admin_rate || 0,
+        training_rate: data.training_rate || 0,
         contract_type_identifier: data.contract_type_identifier,
         effective_date: data.effective_date
       };
@@ -643,19 +643,24 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
         .from('clinical_staff_rates')
         .update({
           staff_id: ratesData.staffId,
-          adult_intake_rate: ratesData.adult_intake_rate,
-          adult_follow_up_rate: ratesData.adult_follow_up_rate,
-          adult_no_show_intake_rate: ratesData.adult_no_show_intake_rate,
-          adult_no_show_follow_up_rate: ratesData.adult_no_show_follow_up_rate,
-          child_intake_rate: ratesData.child_intake_rate,
-          child_follow_up_rate: ratesData.child_follow_up_rate,
-          child_no_show_intake_rate: ratesData.child_no_show_intake_rate,
-          child_no_show_follow_up_rate: ratesData.child_no_show_follow_up_rate,
-          availability_retainer_rate: ratesData.availability_retainer_rate,
-          admin_rate: ratesData.admin_rate,
-          training_rate: ratesData.training_rate,
+          adult_intake_rate: ratesData.adult_intake_rate || 0,
+          adult_follow_up_rate: ratesData.adult_follow_up_rate || 0,
+          adult_no_show_intake_rate: ratesData.adult_no_show_intake_rate || 0,
+          adult_no_show_follow_up_rate: ratesData.adult_no_show_follow_up_rate || 0,
+          child_intake_rate: ratesData.child_intake_rate || 0,
+          child_follow_up_rate: ratesData.child_follow_up_rate || 0,
+          child_no_show_intake_rate: ratesData.child_no_show_intake_rate || 0,
+          child_no_show_follow_up_rate: ratesData.child_no_show_follow_up_rate || 0,
+          availability_retainer_rate: ratesData.availability_retainer_rate || 0,
+          admin_rate: ratesData.admin_rate || 0,
+          training_rate: ratesData.training_rate || 0,
           contract_type_identifier: ratesData.contract_type_identifier,
-          effective_date: ratesData.effective_date
+          effective_date: ratesData.effective_date,
+          // Update legacy fields for backward compatibility
+          intake_session_rate: ratesData.adult_intake_rate || 0,
+          follow_up_session_rate: ratesData.adult_follow_up_rate || 0,
+          no_show_intake_rate: ratesData.adult_no_show_intake_rate || 0,
+          no_show_follow_up_rate: ratesData.adult_no_show_follow_up_rate || 0,
         })
         .eq('id', ratesData.id)
         .select()
@@ -666,17 +671,17 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
       const updatedRates: ClinicalStaffRates = {
         id: data.id,
         staffId: data.staff_id,
-        adult_intake_rate: data.adult_intake_rate,
-        adult_follow_up_rate: data.adult_follow_up_rate,
-        adult_no_show_intake_rate: data.adult_no_show_intake_rate,
-        adult_no_show_follow_up_rate: data.adult_no_show_follow_up_rate,
-        child_intake_rate: data.child_intake_rate,
-        child_follow_up_rate: data.child_follow_up_rate,
-        child_no_show_intake_rate: data.child_no_show_intake_rate,
-        child_no_show_follow_up_rate: data.child_no_show_follow_up_rate,
-        availability_retainer_rate: data.availability_retainer_rate,
-        admin_rate: data.admin_rate,
-        training_rate: data.training_rate,
+        adult_intake_rate: data.adult_intake_rate || 0,
+        adult_follow_up_rate: data.adult_follow_up_rate || 0,
+        adult_no_show_intake_rate: data.adult_no_show_intake_rate || 0,
+        adult_no_show_follow_up_rate: data.adult_no_show_follow_up_rate || 0,
+        child_intake_rate: data.child_intake_rate || 0,
+        child_follow_up_rate: data.child_follow_up_rate || 0,
+        child_no_show_intake_rate: data.child_no_show_intake_rate || 0,
+        child_no_show_follow_up_rate: data.child_no_show_follow_up_rate || 0,
+        availability_retainer_rate: data.availability_retainer_rate || 0,
+        admin_rate: data.admin_rate || 0,
+        training_rate: data.training_rate || 0,
         contract_type_identifier: data.contract_type_identifier,
         effective_date: data.effective_date
       };
@@ -714,27 +719,44 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
       if (error) {
         if (error.code === 'PGRST116') {
-          // No rows found
-          console.log('No rates found for staff:', staffId);
-          return null;
+          // No rows found - return default rates
+          console.log('No rates found for staff, returning defaults:', staffId);
+          const defaultRates: ClinicalStaffRates = {
+            id: 'default-' + staffId,
+            staffId: staffId,
+            adult_intake_rate: 0,
+            adult_follow_up_rate: 0,
+            adult_no_show_intake_rate: 0,
+            adult_no_show_follow_up_rate: 0,
+            child_intake_rate: 0,
+            child_follow_up_rate: 0,
+            child_no_show_intake_rate: 0,
+            child_no_show_follow_up_rate: 0,
+            availability_retainer_rate: 0,
+            admin_rate: 0,
+            training_rate: 0,
+            contract_type_identifier: null,
+            effective_date: new Date().toISOString()
+          };
+          return defaultRates;
         }
         throw error;
       }
 
-      const rates = {
+      const rates: ClinicalStaffRates = {
         id: data.id,
         staffId: data.staff_id,
-        adult_intake_rate: data.adult_intake_rate,
-        adult_follow_up_rate: data.adult_follow_up_rate,
-        adult_no_show_intake_rate: data.adult_no_show_intake_rate,
-        adult_no_show_follow_up_rate: data.adult_no_show_follow_up_rate,
-        child_intake_rate: data.child_intake_rate,
-        child_follow_up_rate: data.child_follow_up_rate,
-        child_no_show_intake_rate: data.child_no_show_intake_rate,
-        child_no_show_follow_up_rate: data.child_no_show_follow_up_rate,
-        availability_retainer_rate: data.availability_retainer_rate,
-        admin_rate: data.admin_rate,
-        training_rate: data.training_rate,
+        adult_intake_rate: data.adult_intake_rate || 0,
+        adult_follow_up_rate: data.adult_follow_up_rate || 0,
+        adult_no_show_intake_rate: data.adult_no_show_intake_rate || 0,
+        adult_no_show_follow_up_rate: data.adult_no_show_follow_up_rate || 0,
+        child_intake_rate: data.child_intake_rate || 0,
+        child_follow_up_rate: data.child_follow_up_rate || 0,
+        child_no_show_intake_rate: data.child_no_show_intake_rate || 0,
+        child_no_show_follow_up_rate: data.child_no_show_follow_up_rate || 0,
+        availability_retainer_rate: data.availability_retainer_rate || 0,
+        admin_rate: data.admin_rate || 0,
+        training_rate: data.training_rate || 0,
         contract_type_identifier: data.contract_type_identifier,
         effective_date: data.effective_date
       };
