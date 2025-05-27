@@ -237,14 +237,19 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({
         const mappedRates: ClinicalStaffRates[] = data.map(item => ({
           id: item.id,
           staffId: item.staff_id,
-          intakeSessionRate: Number(item.intake_session_rate),
-          followUpSessionRate: Number(item.follow_up_session_rate),
-          noShowIntakeRate: Number(item.no_show_intake_rate),
-          noShowFollowUpRate: Number(item.no_show_follow_up_rate),
-          availabilityRetainerRate: Number(item.availability_retainer_rate),
-          adminRate: Number(item.admin_rate),
-          trainingRate: Number(item.training_rate),
-          effectiveDate: item.effective_date,
+          adult_intake_rate: Number(item.adult_intake_rate || item.intake_session_rate || 0),
+          adult_follow_up_rate: Number(item.adult_follow_up_rate || item.follow_up_session_rate || 0),
+          adult_no_show_intake_rate: Number(item.adult_no_show_intake_rate || item.no_show_intake_rate || 0),
+          adult_no_show_follow_up_rate: Number(item.adult_no_show_follow_up_rate || item.no_show_follow_up_rate || 0),
+          child_intake_rate: Number(item.child_intake_rate || item.intake_session_rate || 0),
+          child_follow_up_rate: Number(item.child_follow_up_rate || item.follow_up_session_rate || 0),
+          child_no_show_intake_rate: Number(item.child_no_show_intake_rate || item.no_show_intake_rate || 0),
+          child_no_show_follow_up_rate: Number(item.child_no_show_follow_up_rate || item.no_show_follow_up_rate || 0),
+          availability_retainer_rate: Number(item.availability_retainer_rate),
+          admin_rate: Number(item.admin_rate),
+          training_rate: Number(item.training_rate),
+          effective_date: item.effective_date,
+          contract_type_identifier: item.contract_type_identifier,
         }));
         setClinicalStaffRates(mappedRates);
       }
@@ -520,14 +525,19 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({
         .from("clinical_staff_rates")
         .insert({
           staff_id: rates.staffId,
-          intake_session_rate: rates.intakeSessionRate,
-          follow_up_session_rate: rates.followUpSessionRate,
-          no_show_intake_rate: rates.noShowIntakeRate,
-          no_show_follow_up_rate: rates.noShowFollowUpRate,
-          availability_retainer_rate: rates.availabilityRetainerRate,
-          admin_rate: rates.adminRate,
-          training_rate: rates.trainingRate,
-          effective_date: rates.effectiveDate || new Date().toISOString()
+          adult_intake_rate: rates.adult_intake_rate,
+          adult_follow_up_rate: rates.adult_follow_up_rate,
+          adult_no_show_intake_rate: rates.adult_no_show_intake_rate,
+          adult_no_show_follow_up_rate: rates.adult_no_show_follow_up_rate,
+          child_intake_rate: rates.child_intake_rate,
+          child_follow_up_rate: rates.child_follow_up_rate,
+          child_no_show_intake_rate: rates.child_no_show_intake_rate,
+          child_no_show_follow_up_rate: rates.child_no_show_follow_up_rate,
+          availability_retainer_rate: rates.availability_retainer_rate,
+          admin_rate: rates.admin_rate,
+          training_rate: rates.training_rate,
+          contract_type_identifier: rates.contract_type_identifier,
+          effective_date: rates.effective_date || new Date().toISOString()
         })
         .select();
 
@@ -537,14 +547,19 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({
         const newRates: ClinicalStaffRates = {
           id: data[0].id,
           staffId: data[0].staff_id,
-          intakeSessionRate: Number(data[0].intake_session_rate),
-          followUpSessionRate: Number(data[0].follow_up_session_rate),
-          noShowIntakeRate: Number(data[0].no_show_intake_rate),
-          noShowFollowUpRate: Number(data[0].no_show_follow_up_rate),
-          availabilityRetainerRate: Number(data[0].availability_retainer_rate),
-          adminRate: Number(data[0].admin_rate),
-          trainingRate: Number(data[0].training_rate),
-          effectiveDate: data[0].effective_date,
+          adult_intake_rate: Number(data[0].adult_intake_rate),
+          adult_follow_up_rate: Number(data[0].adult_follow_up_rate),
+          adult_no_show_intake_rate: Number(data[0].adult_no_show_intake_rate),
+          adult_no_show_follow_up_rate: Number(data[0].adult_no_show_follow_up_rate),
+          child_intake_rate: Number(data[0].child_intake_rate),
+          child_follow_up_rate: Number(data[0].child_follow_up_rate),
+          child_no_show_intake_rate: Number(data[0].child_no_show_intake_rate),
+          child_no_show_follow_up_rate: Number(data[0].child_no_show_follow_up_rate),
+          availability_retainer_rate: Number(data[0].availability_retainer_rate),
+          admin_rate: Number(data[0].admin_rate),
+          training_rate: Number(data[0].training_rate),
+          effective_date: data[0].effective_date,
+          contract_type_identifier: data[0].contract_type_identifier,
         };
         
         setClinicalStaffRates(prev => [...prev, newRates]);
@@ -570,13 +585,18 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({
         .from("clinical_staff_rates")
         .update({
           staff_id: rates.staffId,
-          intake_session_rate: rates.intakeSessionRate,
-          follow_up_session_rate: rates.followUpSessionRate,
-          no_show_intake_rate: rates.noShowIntakeRate,
-          no_show_follow_up_rate: rates.noShowFollowUpRate,
-          availability_retainer_rate: rates.availabilityRetainerRate,
-          admin_rate: rates.adminRate,
-          training_rate: rates.trainingRate,
+          adult_intake_rate: rates.adult_intake_rate,
+          adult_follow_up_rate: rates.adult_follow_up_rate,
+          adult_no_show_intake_rate: rates.adult_no_show_intake_rate,
+          adult_no_show_follow_up_rate: rates.adult_no_show_follow_up_rate,
+          child_intake_rate: rates.child_intake_rate,
+          child_follow_up_rate: rates.child_follow_up_rate,
+          child_no_show_intake_rate: rates.child_no_show_intake_rate,
+          child_no_show_follow_up_rate: rates.child_no_show_follow_up_rate,
+          availability_retainer_rate: rates.availability_retainer_rate,
+          admin_rate: rates.admin_rate,
+          training_rate: rates.training_rate,
+          contract_type_identifier: rates.contract_type_identifier,
           updated_at: new Date().toISOString()
         })
         .eq("id", rates.id);
@@ -619,14 +639,19 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({
         return {
           id: data[0].id,
           staffId: data[0].staff_id,
-          intakeSessionRate: Number(data[0].intake_session_rate),
-          followUpSessionRate: Number(data[0].follow_up_session_rate),
-          noShowIntakeRate: Number(data[0].no_show_intake_rate),
-          noShowFollowUpRate: Number(data[0].no_show_follow_up_rate),
-          availabilityRetainerRate: Number(data[0].availability_retainer_rate),
-          adminRate: Number(data[0].admin_rate),
-          trainingRate: Number(data[0].training_rate),
-          effectiveDate: data[0].effective_date,
+          adult_intake_rate: Number(data[0].adult_intake_rate || data[0].intake_session_rate || 600),
+          adult_follow_up_rate: Number(data[0].adult_follow_up_rate || data[0].follow_up_session_rate || 450),
+          adult_no_show_intake_rate: Number(data[0].adult_no_show_intake_rate || data[0].no_show_intake_rate || 300),
+          adult_no_show_follow_up_rate: Number(data[0].adult_no_show_follow_up_rate || data[0].no_show_follow_up_rate || 200),
+          child_intake_rate: Number(data[0].child_intake_rate || data[0].intake_session_rate || 600),
+          child_follow_up_rate: Number(data[0].child_follow_up_rate || data[0].follow_up_session_rate || 450),
+          child_no_show_intake_rate: Number(data[0].child_no_show_intake_rate || data[0].no_show_intake_rate || 300),
+          child_no_show_follow_up_rate: Number(data[0].child_no_show_follow_up_rate || data[0].no_show_follow_up_rate || 200),
+          availability_retainer_rate: Number(data[0].availability_retainer_rate),
+          admin_rate: Number(data[0].admin_rate),
+          training_rate: Number(data[0].training_rate),
+          effective_date: data[0].effective_date,
+          contract_type_identifier: data[0].contract_type_identifier,
         };
       }
       
@@ -634,14 +659,18 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({
       return {
         id: `default-${staffId}`,
         staffId,
-        intakeSessionRate: 600,
-        followUpSessionRate: 450,
-        noShowIntakeRate: 300,
-        noShowFollowUpRate: 200,
-        availabilityRetainerRate: 150,
-        adminRate: 250,
-        trainingRate: 250,
-        effectiveDate: new Date().toISOString(),
+        adult_intake_rate: 600,
+        adult_follow_up_rate: 450,
+        adult_no_show_intake_rate: 300,
+        adult_no_show_follow_up_rate: 200,
+        child_intake_rate: 600,
+        child_follow_up_rate: 450,
+        child_no_show_intake_rate: 300,
+        child_no_show_follow_up_rate: 200,
+        availability_retainer_rate: 150,
+        admin_rate: 250,
+        training_rate: 250,
+        effective_date: new Date().toISOString(),
       };
     } catch (error) {
       console.error("Error getting staff rates:", error);
@@ -974,7 +1003,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({
           month: work.month,
           year: work.year,
           intakes_completed: work.intakesCompleted,
-          follow_up_units_completed: work.followUpUnitsCompleted,
+          followUpUnitsCompleted: work.followUpUnitsCompleted,
           no_show_hours: work.noShowHours,
           availability_retainer_hours: work.availabilityRetainerHours,
           admin_hours: work.adminHours,

@@ -29,29 +29,29 @@ export const getSessionCost = (
   if (session.showStatus === "Show") {
     if (session.meetingType === "Intake") {
       if (serviceType === "Adult") {
-        rate = Number(staffRates.adultIntakeRate || staffRates.intakeSessionRate) || 0;
+        rate = Number(staffRates.adult_intake_rate) || 0;
       } else {
-        rate = Number(staffRates.childIntakeRate || staffRates.intakeSessionRate) || 0;
+        rate = Number(staffRates.child_intake_rate) || 0;
       }
     } else if (session.meetingType === "FollowUp") {
       if (serviceType === "Adult") {
-        rate = Number(staffRates.adultFollowUpRate || staffRates.followUpSessionRate) || 0;
+        rate = Number(staffRates.adult_follow_up_rate) || 0;
       } else {
-        rate = Number(staffRates.childFollowUpRate || staffRates.followUpSessionRate) || 0;
+        rate = Number(staffRates.child_follow_up_rate) || 0;
       }
     }
   } else if (session.showStatus === "NoShow") {
     if (session.meetingType === "Intake") {
       if (serviceType === "Adult") {
-        rate = Number(staffRates.adultNoShowIntakeRate || staffRates.noShowIntakeRate) || 0;
+        rate = Number(staffRates.adult_no_show_intake_rate) || 0;
       } else {
-        rate = Number(staffRates.childNoShowIntakeRate || staffRates.noShowIntakeRate) || 0;
+        rate = Number(staffRates.child_no_show_intake_rate) || 0;
       }
     } else if (session.meetingType === "FollowUp") {
       if (serviceType === "Adult") {
-        rate = Number(staffRates.adultNoShowFollowUpRate || staffRates.noShowFollowUpRate) || 0;
+        rate = Number(staffRates.adult_no_show_follow_up_rate) || 0;
       } else {
-        rate = Number(staffRates.childNoShowFollowUpRate || staffRates.noShowFollowUpRate) || 0;
+        rate = Number(staffRates.child_no_show_follow_up_rate) || 0;
       }
     }
   }

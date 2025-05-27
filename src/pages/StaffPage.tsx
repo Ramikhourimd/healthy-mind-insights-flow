@@ -69,23 +69,19 @@ const StaffPage: React.FC = () => {
   const [isRatesEditing, setIsRatesEditing] = useState(false);
   const [currentRates, setCurrentRates] = useState<Omit<ClinicalStaffRates, "id"> & { id?: string }>({
     staffId: "",
-    intakeSessionRate: 0,
-    followUpSessionRate: 0,
-    noShowIntakeRate: 0,
-    noShowFollowUpRate: 0,
-    adultIntakeRate: 0,
-    adultFollowUpRate: 0,
-    adultNoShowIntakeRate: 0,
-    adultNoShowFollowUpRate: 0,
-    childIntakeRate: 0,
-    childFollowUpRate: 0,
-    childNoShowIntakeRate: 0,
-    childNoShowFollowUpRate: 0,
-    availabilityRetainerRate: 0,
-    adminRate: 0,
-    trainingRate: 0,
-    contractTypeIdentifier: "",
-    effectiveDate: new Date().toISOString(),
+    adult_intake_rate: 0,
+    adult_follow_up_rate: 0,
+    adult_no_show_intake_rate: 0,
+    adult_no_show_follow_up_rate: 0,
+    child_intake_rate: 0,
+    child_follow_up_rate: 0,
+    child_no_show_intake_rate: 0,
+    child_no_show_follow_up_rate: 0,
+    availability_retainer_rate: 0,
+    admin_rate: 0,
+    training_rate: 0,
+    contract_type_identifier: "",
+    effective_date: new Date().toISOString(),
   });
 
   // Date state for staff member start and end dates
@@ -160,44 +156,36 @@ const StaffPage: React.FC = () => {
         await updateStaffRates({
           id: currentRates.id,
           staffId: currentRates.staffId,
-          intakeSessionRate: currentRates.intakeSessionRate,
-          followUpSessionRate: currentRates.followUpSessionRate,
-          noShowIntakeRate: currentRates.noShowIntakeRate,
-          noShowFollowUpRate: currentRates.noShowFollowUpRate,
-          adultIntakeRate: currentRates.adultIntakeRate,
-          adultFollowUpRate: currentRates.adultFollowUpRate,
-          adultNoShowIntakeRate: currentRates.adultNoShowIntakeRate,
-          adultNoShowFollowUpRate: currentRates.adultNoShowFollowUpRate,
-          childIntakeRate: currentRates.childIntakeRate,
-          childFollowUpRate: currentRates.childFollowUpRate,
-          childNoShowIntakeRate: currentRates.childNoShowIntakeRate,
-          childNoShowFollowUpRate: currentRates.childNoShowFollowUpRate,
-          availabilityRetainerRate: currentRates.availabilityRetainerRate,
-          adminRate: currentRates.adminRate,
-          trainingRate: currentRates.trainingRate,
-          contractTypeIdentifier: currentRates.contractTypeIdentifier,
-          effectiveDate: currentRates.effectiveDate,
+          adult_intake_rate: currentRates.adult_intake_rate,
+          adult_follow_up_rate: currentRates.adult_follow_up_rate,
+          adult_no_show_intake_rate: currentRates.adult_no_show_intake_rate,
+          adult_no_show_follow_up_rate: currentRates.adult_no_show_follow_up_rate,
+          child_intake_rate: currentRates.child_intake_rate,
+          child_follow_up_rate: currentRates.child_follow_up_rate,
+          child_no_show_intake_rate: currentRates.child_no_show_intake_rate,
+          child_no_show_follow_up_rate: currentRates.child_no_show_follow_up_rate,
+          availability_retainer_rate: currentRates.availability_retainer_rate,
+          admin_rate: currentRates.admin_rate,
+          training_rate: currentRates.training_rate,
+          contract_type_identifier: currentRates.contract_type_identifier,
+          effective_date: currentRates.effective_date,
         });
       } else {
         await addStaffRates({
           staffId: currentRates.staffId,
-          intakeSessionRate: currentRates.intakeSessionRate,
-          followUpSessionRate: currentRates.followUpSessionRate,
-          noShowIntakeRate: currentRates.noShowIntakeRate,
-          noShowFollowUpRate: currentRates.noShowFollowUpRate,
-          adultIntakeRate: currentRates.adultIntakeRate,
-          adultFollowUpRate: currentRates.adultFollowUpRate,
-          adultNoShowIntakeRate: currentRates.adultNoShowIntakeRate,
-          adultNoShowFollowUpRate: currentRates.adultNoShowFollowUpRate,
-          childIntakeRate: currentRates.childIntakeRate,
-          childFollowUpRate: currentRates.childFollowUpRate,
-          childNoShowIntakeRate: currentRates.childNoShowIntakeRate,
-          childNoShowFollowUpRate: currentRates.childNoShowFollowUpRate,
-          availabilityRetainerRate: currentRates.availabilityRetainerRate,
-          adminRate: currentRates.adminRate,
-          trainingRate: currentRates.trainingRate,
-          contractTypeIdentifier: currentRates.contractTypeIdentifier,
-          effectiveDate: currentRates.effectiveDate,
+          adult_intake_rate: currentRates.adult_intake_rate,
+          adult_follow_up_rate: currentRates.adult_follow_up_rate,
+          adult_no_show_intake_rate: currentRates.adult_no_show_intake_rate,
+          adult_no_show_follow_up_rate: currentRates.adult_no_show_follow_up_rate,
+          child_intake_rate: currentRates.child_intake_rate,
+          child_follow_up_rate: currentRates.child_follow_up_rate,
+          child_no_show_intake_rate: currentRates.child_no_show_intake_rate,
+          child_no_show_follow_up_rate: currentRates.child_no_show_follow_up_rate,
+          availability_retainer_rate: currentRates.availability_retainer_rate,
+          admin_rate: currentRates.admin_rate,
+          training_rate: currentRates.training_rate,
+          contract_type_identifier: currentRates.contract_type_identifier,
+          effective_date: currentRates.effective_date,
         });
       }
       handleCloseRatesDialog();
@@ -256,34 +244,30 @@ const StaffPage: React.FC = () => {
   const handleAddNewRates = () => {
     setCurrentRates({
       staffId: staffMembers.length > 0 ? staffMembers[0].id : "",
-      intakeSessionRate: 0,
-      followUpSessionRate: 0,
-      noShowIntakeRate: 0,
-      noShowFollowUpRate: 0,
-      adultIntakeRate: 0,
-      adultFollowUpRate: 0,
-      adultNoShowIntakeRate: 0,
-      adultNoShowFollowUpRate: 0,
-      childIntakeRate: 0,
-      childFollowUpRate: 0,
-      childNoShowIntakeRate: 0,
-      childNoShowFollowUpRate: 0,
-      availabilityRetainerRate: 0,
-      adminRate: 0,
-      trainingRate: 0,
-      contractTypeIdentifier: "",
-      effectiveDate: new Date().toISOString(),
+      adult_intake_rate: 0,
+      adult_follow_up_rate: 0,
+      adult_no_show_intake_rate: 0,
+      adult_no_show_follow_up_rate: 0,
+      child_intake_rate: 0,
+      child_follow_up_rate: 0,
+      child_no_show_intake_rate: 0,
+      child_no_show_follow_up_rate: 0,
+      availability_retainer_rate: 0,
+      admin_rate: 0,
+      training_rate: 0,
+      contract_type_identifier: "",
+      effective_date: new Date().toISOString(),
     });
     setIsRatesEditing(false);
     setIsRatesDialogOpen(true);
   };
 
-  // Close staff dialog and reset form
+  // Close dialog for staff member
   const handleCloseStaffDialog = () => {
     setIsStaffDialogOpen(false);
   };
 
-  // Close rates dialog and reset form
+  // Close dialog for staff rates
   const handleCloseRatesDialog = () => {
     setIsRatesDialogOpen(false);
   };
@@ -500,12 +484,12 @@ const StaffPage: React.FC = () => {
               </div>
               
               <div className="grid w-full items-center gap-2">
-                <Label htmlFor="contractTypeIdentifier">Contract Type Identifier</Label>
+                <Label htmlFor="contract_type_identifier">Contract Type Identifier</Label>
                 <Input
-                  id="contractTypeIdentifier"
-                  name="contractTypeIdentifier"
-                  value={currentRates.contractTypeIdentifier}
-                  onChange={(e) => setCurrentRates({ ...currentRates, contractTypeIdentifier: e.target.value })}
+                  id="contract_type_identifier"
+                  name="contract_type_identifier"
+                  value={currentRates.contract_type_identifier}
+                  onChange={(e) => setCurrentRates({ ...currentRates, contract_type_identifier: e.target.value })}
                   placeholder="e.g., Special Contract, Standard, etc."
                 />
               </div>
@@ -515,45 +499,45 @@ const StaffPage: React.FC = () => {
                 <h3 className="text-lg font-medium">Adult Service Rates</h3>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="grid w-full items-center gap-2">
-                    <Label htmlFor="adultIntakeRate">Adult Intake Rate (ILS)</Label>
+                    <Label htmlFor="adult_intake_rate">Adult Intake Rate (ILS)</Label>
                     <Input
-                      id="adultIntakeRate"
-                      name="adultIntakeRate"
+                      id="adult_intake_rate"
+                      name="adult_intake_rate"
                       type="number"
-                      value={currentRates.adultIntakeRate}
+                      value={currentRates.adult_intake_rate}
                       onChange={handleRateChange}
                       min={0}
                     />
                   </div>
                   <div className="grid w-full items-center gap-2">
-                    <Label htmlFor="adultFollowUpRate">Adult Follow-Up Rate (ILS)</Label>
+                    <Label htmlFor="adult_follow_up_rate">Adult Follow-Up Rate (ILS)</Label>
                     <Input
-                      id="adultFollowUpRate"
-                      name="adultFollowUpRate"
+                      id="adult_follow_up_rate"
+                      name="adult_follow_up_rate"
                       type="number"
-                      value={currentRates.adultFollowUpRate}
+                      value={currentRates.adult_follow_up_rate}
                       onChange={handleRateChange}
                       min={0}
                     />
                   </div>
                   <div className="grid w-full items-center gap-2">
-                    <Label htmlFor="adultNoShowIntakeRate">Adult No-Show Intake Rate (ILS)</Label>
+                    <Label htmlFor="adult_no_show_intake_rate">Adult No-Show Intake Rate (ILS)</Label>
                     <Input
-                      id="adultNoShowIntakeRate"
-                      name="adultNoShowIntakeRate"
+                      id="adult_no_show_intake_rate"
+                      name="adult_no_show_intake_rate"
                       type="number"
-                      value={currentRates.adultNoShowIntakeRate}
+                      value={currentRates.adult_no_show_intake_rate}
                       onChange={handleRateChange}
                       min={0}
                     />
                   </div>
                   <div className="grid w-full items-center gap-2">
-                    <Label htmlFor="adultNoShowFollowUpRate">Adult No-Show Follow-Up Rate (ILS)</Label>
+                    <Label htmlFor="adult_no_show_follow_up_rate">Adult No-Show Follow-Up Rate (ILS)</Label>
                     <Input
-                      id="adultNoShowFollowUpRate"
-                      name="adultNoShowFollowUpRate"
+                      id="adult_no_show_follow_up_rate"
+                      name="adult_no_show_follow_up_rate"
                       type="number"
-                      value={currentRates.adultNoShowFollowUpRate}
+                      value={currentRates.adult_no_show_follow_up_rate}
                       onChange={handleRateChange}
                       min={0}
                     />
@@ -566,96 +550,45 @@ const StaffPage: React.FC = () => {
                 <h3 className="text-lg font-medium">Child Service Rates</h3>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="grid w-full items-center gap-2">
-                    <Label htmlFor="childIntakeRate">Child Intake Rate (ILS)</Label>
+                    <Label htmlFor="child_intake_rate">Child Intake Rate (ILS)</Label>
                     <Input
-                      id="childIntakeRate"
-                      name="childIntakeRate"
+                      id="child_intake_rate"
+                      name="child_intake_rate"
                       type="number"
-                      value={currentRates.childIntakeRate}
+                      value={currentRates.child_intake_rate}
                       onChange={handleRateChange}
                       min={0}
                     />
                   </div>
                   <div className="grid w-full items-center gap-2">
-                    <Label htmlFor="childFollowUpRate">Child Follow-Up Rate (ILS)</Label>
+                    <Label htmlFor="child_follow_up_rate">Child Follow-Up Rate (ILS)</Label>
                     <Input
-                      id="childFollowUpRate"
-                      name="childFollowUpRate"
+                      id="child_follow_up_rate"
+                      name="child_follow_up_rate"
                       type="number"
-                      value={currentRates.childFollowUpRate}
+                      value={currentRates.child_follow_up_rate}
                       onChange={handleRateChange}
                       min={0}
                     />
                   </div>
                   <div className="grid w-full items-center gap-2">
-                    <Label htmlFor="childNoShowIntakeRate">Child No-Show Intake Rate (ILS)</Label>
+                    <Label htmlFor="child_no_show_intake_rate">Child No-Show Intake Rate (ILS)</Label>
                     <Input
-                      id="childNoShowIntakeRate"
-                      name="childNoShowIntakeRate"
+                      id="child_no_show_intake_rate"
+                      name="child_no_show_intake_rate"
                       type="number"
-                      value={currentRates.childNoShowIntakeRate}
+                      value={currentRates.child_no_show_intake_rate}
                       onChange={handleRateChange}
                       min={0}
                     />
                   </div>
                   <div className="grid w-full items-center gap-2">
-                    <Label htmlFor="childNoShowFollowUpRate">Child No-Show Follow-Up Rate (ILS)</Label>
+                    <Label htmlFor="child_no_show_follow_up_rate">Child No-Show Follow-Up Rate (ILS)</Label>
                     <Input
-                      id="childNoShowFollowUpRate"
-                      name="childNoShowFollowUpRate"
+                      id="child_no_show_follow_up_rate"
+                      name="child_no_show_follow_up_rate"
                       type="number"
-                      value={currentRates.childNoShowFollowUpRate}
-                      onChange={handleRateChange}
-                      min={0}
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* Legacy Rates Section (for backward compatibility) */}
-              <div className="border rounded-lg p-4 space-y-4 bg-gray-50">
-                <h3 className="text-lg font-medium text-gray-600">Legacy Rates (Backward Compatibility)</h3>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="grid w-full items-center gap-2">
-                    <Label htmlFor="intakeSessionRate">Intake Session Rate (ILS)</Label>
-                    <Input
-                      id="intakeSessionRate"
-                      name="intakeSessionRate"
-                      type="number"
-                      value={currentRates.intakeSessionRate}
-                      onChange={handleRateChange}
-                      min={0}
-                    />
-                  </div>
-                  <div className="grid w-full items-center gap-2">
-                    <Label htmlFor="followUpSessionRate">Follow-Up Session Rate (ILS)</Label>
-                    <Input
-                      id="followUpSessionRate"
-                      name="followUpSessionRate"
-                      type="number"
-                      value={currentRates.followUpSessionRate}
-                      onChange={handleRateChange}
-                      min={0}
-                    />
-                  </div>
-                  <div className="grid w-full items-center gap-2">
-                    <Label htmlFor="noShowIntakeRate">No-Show Intake Rate (ILS)</Label>
-                    <Input
-                      id="noShowIntakeRate"
-                      name="noShowIntakeRate"
-                      type="number"
-                      value={currentRates.noShowIntakeRate}
-                      onChange={handleRateChange}
-                      min={0}
-                    />
-                  </div>
-                  <div className="grid w-full items-center gap-2">
-                    <Label htmlFor="noShowFollowUpRate">No-Show Follow-Up Rate (ILS)</Label>
-                    <Input
-                      id="noShowFollowUpRate"
-                      name="noShowFollowUpRate"
-                      type="number"
-                      value={currentRates.noShowFollowUpRate}
+                      value={currentRates.child_no_show_follow_up_rate}
                       onChange={handleRateChange}
                       min={0}
                     />
@@ -668,55 +601,55 @@ const StaffPage: React.FC = () => {
                 <h3 className="text-lg font-medium">Other Rates</h3>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="grid w-full items-center gap-2">
-                    <Label htmlFor="availabilityRetainerRate">Availability Retainer Rate (ILS)</Label>
+                    <Label htmlFor="availability_retainer_rate">Availability Retainer Rate (ILS)</Label>
                     <Input
-                      id="availabilityRetainerRate"
-                      name="availabilityRetainerRate"
+                      id="availability_retainer_rate"
+                      name="availability_retainer_rate"
                       type="number"
-                      value={currentRates.availabilityRetainerRate}
+                      value={currentRates.availability_retainer_rate}
                       onChange={handleRateChange}
                       required
                       min={0}
                     />
                   </div>
                   <div className="grid w-full items-center gap-2">
-                    <Label htmlFor="adminRate">Admin Rate (ILS)</Label>
+                    <Label htmlFor="admin_rate">Admin Rate (ILS)</Label>
                     <Input
-                      id="adminRate"
-                      name="adminRate"
+                      id="admin_rate"
+                      name="admin_rate"
                       type="number"
-                      value={currentRates.adminRate}
+                      value={currentRates.admin_rate}
                       onChange={handleRateChange}
                       required
                       min={0}
                     />
                   </div>
                   <div className="grid w-full items-center gap-2">
-                    <Label htmlFor="trainingRate">Training Rate (ILS)</Label>
+                    <Label htmlFor="training_rate">Training Rate (ILS)</Label>
                     <Input
-                      id="trainingRate"
-                      name="trainingRate"
+                      id="training_rate"
+                      name="training_rate"
                       type="number"
-                      value={currentRates.trainingRate}
+                      value={currentRates.training_rate}
                       onChange={handleRateChange}
                       required
                       min={0}
                     />
                   </div>
                   <div className="grid w-full items-center gap-2">
-                    <Label htmlFor="effectiveDate">Effective Date</Label>
+                    <Label htmlFor="effective_date">Effective Date</Label>
                     <Popover>
                       <PopoverTrigger asChild>
                         <Button
                           variant={"outline"}
                           className={cn(
                             "w-[240px] justify-start text-left font-normal",
-                            !currentRates.effectiveDate && "text-muted-foreground"
+                            !currentRates.effective_date && "text-muted-foreground"
                           )}
                         >
                           <CalendarIcon className="mr-2 h-4 w-4" />
-                          {currentRates.effectiveDate ? (
-                            format(new Date(currentRates.effectiveDate), "PPP")
+                          {currentRates.effective_date ? (
+                            format(new Date(currentRates.effective_date), "PPP")
                           ) : (
                             <span>Pick a date</span>
                           )}
@@ -725,10 +658,10 @@ const StaffPage: React.FC = () => {
                       <PopoverContent className="w-auto p-0" align="start">
                         <Calendar
                           mode="single"
-                          selected={currentRates.effectiveDate ? new Date(currentRates.effectiveDate) : undefined}
+                          selected={currentRates.effective_date ? new Date(currentRates.effective_date) : undefined}
                           onSelect={(date) => {
                             const selectedDate = date ? format(date, "yyyy-MM-dd") : undefined;
-                            setCurrentRates({ ...currentRates, effectiveDate: selectedDate });
+                            setCurrentRates({ ...currentRates, effective_date: selectedDate });
                           }}
                           disabled={(date) =>
                             date > new Date()

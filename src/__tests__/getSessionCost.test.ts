@@ -7,14 +7,18 @@ describe('getSessionCost', () => {
   const mockStaffRates: ClinicalStaffRates = {
     id: 'test-rate-id',
     staffId: 'test-staff-id',
-    intakeSessionRate: 600,
-    followUpSessionRate: 450,
-    noShowIntakeRate: 300,
-    noShowFollowUpRate: 225,
-    availabilityRetainerRate: 150,
-    adminRate: 250,
-    trainingRate: 250,
-    effectiveDate: '2024-01-01',
+    adult_intake_rate: 600,
+    adult_follow_up_rate: 450,
+    adult_no_show_intake_rate: 300,
+    adult_no_show_follow_up_rate: 225,
+    child_intake_rate: 600,
+    child_follow_up_rate: 450,
+    child_no_show_intake_rate: 300,
+    child_no_show_follow_up_rate: 225,
+    availability_retainer_rate: 150,
+    admin_rate: 250,
+    training_rate: 250,
+    effective_date: '2024-01-01',
   };
 
   const createMockSession = (
