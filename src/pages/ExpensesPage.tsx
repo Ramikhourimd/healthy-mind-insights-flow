@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -48,7 +49,7 @@ const ExpensesPage: React.FC = () => {
   const { 
     fixedOverheads, 
     addFixedOverhead, 
-    updateFixedOveroverhead, 
+    updateFixedOverhead, 
     deleteFixedOverhead, 
     currentPeriod, 
     financialSummary,
