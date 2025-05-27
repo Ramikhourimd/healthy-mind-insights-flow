@@ -127,7 +127,7 @@ const ExpensesPage: React.FC = () => {
     const { filteredOverheads, filteredAdminStaff, filteredSessions } = filteredData;
 
     // Calculate clinical staff breakdown using the shared utility
-    const clinicalBreakdown: { [staffId: string]: { name: string; sessions: any[]; totalCost: number } } = {};
+    const clinicalBreakdown: { [staffId: string]: { name: string; sessions: any[]; totalCost: number; totalSessionCount: number } } = {};
     
     filteredSessions.forEach(session => {
       if (!clinicalBreakdown[session.staffId]) {
@@ -135,7 +135,8 @@ const ExpensesPage: React.FC = () => {
         clinicalBreakdown[session.staffId] = {
           name: staffMember ? staffMember.name : "Unknown Staff",
           sessions: [],
-          totalCost: 0
+          totalCost: 0,
+          totalSessionCount: 0
         };
       }
       
@@ -159,6 +160,7 @@ const ExpensesPage: React.FC = () => {
         rate: rate
       });
       clinicalBreakdown[session.staffId].totalCost += sessionCost;
+      clinicalBreakdown[session.staffId].totalSessionCount += (Number(session.count) || 0);
     });
     
     // Use values from financialSummary instead of recalculating
@@ -517,7 +519,7 @@ const ExpensesPage: React.FC = () => {
                       {Object.entries(calculations.clinicalBreakdown).map(([staffId, data]) => (
                         <TableRow key={staffId} className="bg-gray-50">
                           <TableCell className="pl-8 text-sm text-gray-600">
-                            {data.name} ({data.sessions.length} sessions)
+                            {data.name} ({data.totalSessionCount} sessions)
                           </TableCell>
                           <TableCell className="text-right text-sm">{formatCurrency(data.totalCost)}</TableCell>
                           <TableCell className="text-right text-sm">
@@ -682,7 +684,7 @@ const ExpensesPage: React.FC = () => {
           <Card className="shadow-sm">
             <CardHeader>
               <CardTitle className="text-lg font-medium">
-                Clinical Staff Sessions ({filteredData.filteredSessions.length} sessions)
+                Clinical Staff Sessions ({filteredData.filteredSessions.reduce((sum, session) => sum + (Number(session.count) || 0), 0)} total sessions)
               </CardTitle>
             </CardHeader>
             <CardContent>
