@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -28,7 +29,7 @@ import {
   SelectTrigger, 
   SelectValue 
 } from "@/components/ui/select";
-import { ClinicType, MeetingType, ShowStatus, ClinicalSession, AdminStaffFinancials } from "@/types/finance";
+import { ClinicType, MeetingType, ShowStatus, ClinicalSession, AdminStaffFinancials, ServiceType } from "@/types/finance";
 import ExcelImporter from "@/components/excel/ExcelImporter";
 import { useToast } from "@/components/ui/use-toast";
 import {
@@ -214,6 +215,7 @@ const ExpensesPage: React.FC = () => {
     clinicType: "MCB" as ClinicType,
     meetingType: "Intake" as MeetingType,
     showStatus: "Show" as ShowStatus,
+    serviceAgeGroup: "Adult" as ServiceType,
     count: 1,
     duration: 60,
     month: currentPeriod.month,
@@ -295,6 +297,7 @@ const ExpensesPage: React.FC = () => {
           clinicType: currentSession.clinicType,
           meetingType: currentSession.meetingType,
           showStatus: currentSession.showStatus,
+          serviceAgeGroup: currentSession.serviceAgeGroup,
           count: currentSession.count,
           duration: currentSession.duration,
           month: currentPeriod.month,
@@ -306,6 +309,7 @@ const ExpensesPage: React.FC = () => {
           clinicType: currentSession.clinicType,
           meetingType: currentSession.meetingType,
           showStatus: currentSession.showStatus,
+          serviceAgeGroup: currentSession.serviceAgeGroup,
           count: currentSession.count,
           duration: currentSession.duration,
           month: currentPeriod.month,
@@ -410,6 +414,7 @@ const ExpensesPage: React.FC = () => {
       clinicType: "MCB" as ClinicType,
       meetingType: "Intake" as MeetingType,
       showStatus: "Show" as ShowStatus,
+      serviceAgeGroup: "Adult" as ServiceType,
       count: 1,
       duration: 60,
       month: currentPeriod.month,
@@ -471,6 +476,7 @@ const ExpensesPage: React.FC = () => {
           clinicType: session.clinicType,
           meetingType: session.meetingType,
           showStatus: session.showStatus,
+          serviceAgeGroup: session.serviceAgeGroup || "Adult",
           count: session.count,
           duration: session.duration,
           month: currentPeriod.month,
@@ -1021,6 +1027,22 @@ const ExpensesPage: React.FC = () => {
                   <SelectContent>
                     <SelectItem value="Show">Show</SelectItem>
                     <SelectItem value="NoShow">No Show</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="grid w-full items-center gap-2">
+                <Label htmlFor="serviceAgeGroup">Service Age Group</Label>
+                <Select 
+                  value={currentSession.serviceAgeGroup} 
+                  onValueChange={(value) => handleSessionChange("serviceAgeGroup", value)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select Age Group" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Adult">Adult</SelectItem>
+                    <SelectItem value="Child">Child</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
