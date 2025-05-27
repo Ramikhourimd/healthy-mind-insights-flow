@@ -1,54 +1,16 @@
 
-import React, { useState, useEffect, useMemo } from "react";
-import { Button } from "@/components/ui/button";
+import React, { useState, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
 import { useFinance } from "@/context/FinanceContext";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { Plus, Pencil, Trash, ChevronDown, ChevronRight } from "lucide-react";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from "@/components/ui/dialog";
-import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { 
-  Select, 
-  SelectContent, 
-  SelectItem, 
-  SelectTrigger, 
-  SelectValue 
-} from "@/components/ui/select";
-import { ClinicType, MeetingType, ShowStatus, ClinicalSession, AdminStaffFinancials, ServiceType } from "@/types/finance";
-import ExcelImporter from "@/components/excel/ExcelImporter";
 import { useToast } from "@/components/ui/use-toast";
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/components/ui/collapsible";
 import { getSessionCost } from "@/utils/getSessionCost";
-
-// Add admin staff type
-type AdminStaff = {
-  id: string;
-  name: string;
-  role: string;
-  baseSalary: number;
-  commission: number;
-  month: number;
-  year: number;
-};
+import { ExpenseSummaryCard } from "@/components/expenses/ExpenseSummaryCard";
+import { FixedOverheadsTab } from "@/components/expenses/FixedOverheadsTab";
+import { AdminStaffTab } from "@/components/expenses/AdminStaffTab";
+import ClinicalStaffTab from "@/components/expenses/ClinicalStaffTab";
+import { OverheadDialog } from "@/components/expenses/dialogs/OverheadDialog";
+import { AdminStaffDialog } from "@/components/expenses/dialogs/AdminStaffDialog";
 
 const ExpensesPage: React.FC = () => {
   const { toast } = useToast();
@@ -62,10 +24,6 @@ const ExpensesPage: React.FC = () => {
     clinicalSessions,
     staffMembers,
     clinicalStaffRates,
-    addClinicalSession,
-    updateClinicalSession,
-    deleteClinicalSession,
-    updateFinancialSummary,
     adminStaffFinancials,
     addAdminStaff,
     updateAdminStaff,
@@ -78,32 +36,7 @@ const ExpensesPage: React.FC = () => {
   const [overheadBreakdownOpen, setOverheadBreakdownOpen] = useState(false);
   const [staffDetailBreakdowns, setStaffDetailBreakdowns] = useState<{ [staffId: string]: boolean }>({});
   
-  // State to track sessions
-  const [displayedSessions, setDisplayedSessions] = useState<ClinicalSession[]>([]);
-  
-  // Admin staff state
-  const [adminStaff, setAdminStaff] = useState<AdminStaff[]>([
-    {
-      id: "1",
-      name: "Shira Lachmann",
-      role: "Clinic Manager",
-      baseSalary: 15000,
-      commission: 2500,
-      month: currentPeriod.month,
-      year: currentPeriod.year,
-    },
-    {
-      id: "2",
-      name: "Maya Cohen",
-      role: "Admin Assistant",
-      baseSalary: 8500,
-      commission: 0,
-      month: currentPeriod.month,
-      year: currentPeriod.year,
-    }
-  ]);
-  
-  // Memoized filtered data to avoid recalculation issues
+  // Memoized filtered data
   const filteredData = useMemo(() => {
     const filteredOverheads = fixedOverheads.filter(
       overhead => overhead.month === currentPeriod.month && overhead.year === currentPeriod.year
@@ -124,11 +57,10 @@ const ExpensesPage: React.FC = () => {
     };
   }, [fixedOverheads, adminStaffFinancials, clinicalSessions, currentPeriod]);
 
-  // Use financial summary from context instead of recalculating
+  // Calculate clinical breakdown
   const calculations = useMemo(() => {
-    const { filteredOverheads, filteredAdminStaff, filteredSessions } = filteredData;
+    const { filteredSessions } = filteredData;
 
-    // Calculate clinical staff breakdown using the shared utility
     const clinicalBreakdown: { [staffId: string]: { 
       name: string; 
       sessions: any[]; 
@@ -153,7 +85,6 @@ const ExpensesPage: React.FC = () => {
       const sessionCost = getSessionCost(session, staffRates);
       
       if (sessionCost === 0 && !staffRates) {
-        // Show toast for missing rates instead of using fallback
         toast({
           title: "Missing Staff Rates",
           description: `No payment rates found for ${clinicalBreakdown[session.staffId].name}. Please add rates in Staff Management.`,
@@ -162,8 +93,6 @@ const ExpensesPage: React.FC = () => {
       }
       
       const rate = (Number(session.count) || 0) > 0 ? sessionCost / (Number(session.count) || 1) : 0;
-      
-      // Create a breakdown key for session type
       const breakdownKey = `${session.meetingType} - ${session.showStatus}`;
       
       if (!clinicalBreakdown[session.staffId].sessionTypeBreakdown[breakdownKey]) {
@@ -186,53 +115,20 @@ const ExpensesPage: React.FC = () => {
       clinicalBreakdown[session.staffId].totalSessionCount += (Number(session.count) || 0);
     });
     
-    // Use values from financialSummary instead of recalculating
     return {
       clinicalBreakdown,
-      totalClinicalCosts: financialSummary.totalClinicalCosts,
-      totalAdminCosts: financialSummary.totalAdminCosts,
-      totalFixedOverheads: financialSummary.totalFixedOverheads,
-      totalExpenses: financialSummary.totalExpenses
+      totalClinicalCosts: financialSummary?.totalClinicalCosts || 0,
+      totalAdminCosts: financialSummary?.totalAdminCosts || 0,
+      totalFixedOverheads: financialSummary?.totalFixedOverheads || 0,
+      totalExpenses: financialSummary?.totalExpenses || 0
     };
   }, [filteredData, staffMembers, clinicalStaffRates, financialSummary, toast]);
 
-  // State for the overhead form
+  // Dialog states
   const [isOverheadDialogOpen, setIsOverheadDialogOpen] = useState(false);
-  const [isEditing, setIsEditing] = useState(false);
-  const [currentOverhead, setCurrentOverhead] = useState({
-    id: "",
-    name: "",
-    monthlyCost: 0,
-    month: currentPeriod.month,
-    year: currentPeriod.year,
-  });
-
-  // State for the clinical session form
-  const [isSessionDialogOpen, setIsSessionDialogOpen] = useState(false);
-  const [isSessionEditing, setIsSessionEditing] = useState(false);
-  const [currentSession, setCurrentSession] = useState<Omit<ClinicalSession, "id"> & { id?: string }>({
-    staffId: "",
-    clinicType: "MCB" as ClinicType,
-    meetingType: "Intake" as MeetingType,
-    showStatus: "Show" as ShowStatus,
-    serviceAgeGroup: "Adult" as ServiceType,
-    count: 1,
-    duration: 60,
-    month: currentPeriod.month,
-    year: currentPeriod.year,
-  });
-
-  // State for the admin staff form
   const [isAdminDialogOpen, setIsAdminDialogOpen] = useState(false);
-  const [isAdminEditing, setIsAdminEditing] = useState(false);
-  const [currentAdminStaff, setCurrentAdminStaff] = useState<Omit<AdminStaffFinancials, "id"> & { id?: string }>({
-    name: "",
-    role: "",
-    baseSalary: 0,
-    commission: 0,
-    month: currentPeriod.month,
-    year: currentPeriod.year,
-  });
+  const [editingOverhead, setEditingOverhead] = useState<any>(null);
+  const [editingAdminStaff, setEditingAdminStaff] = useState<any>(null);
 
   // Format currency
   const formatCurrency = (amount: number) => {
@@ -244,221 +140,6 @@ const ExpensesPage: React.FC = () => {
     }).format(amount);
   };
 
-  // Handle overhead form changes
-  const handleOverheadChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setCurrentOverhead({
-      ...currentOverhead,
-      [name]: name === "name" ? value : Number(value),
-    });
-  };
-
-  // Handle clinical session form changes
-  const handleSessionChange = (name: string, value: any) => {
-    setCurrentSession({
-      ...currentSession,
-      [name]: value,
-    });
-  };
-
-  // Handle admin staff form changes
-  const handleAdminStaffChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setCurrentAdminStaff({
-      ...currentAdminStaff,
-      [name]: name === "name" || name === "role" ? value : Number(value),
-    });
-  };
-
-  // Handle overhead form submission
-  const handleOverheadSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (isEditing) {
-      updateFixedOverhead(currentOverhead);
-    } else {
-      addFixedOverhead({
-        name: currentOverhead.name,
-        monthlyCost: currentOverhead.monthlyCost,
-        month: currentPeriod.month,
-        year: currentPeriod.year,
-      });
-    }
-    handleCloseOverheadDialog();
-  };
-
-  // Handle clinical session form submission
-  const handleSessionSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    try {
-      if (isSessionEditing && currentSession.id) {
-        await updateClinicalSession({
-          id: currentSession.id,
-          staffId: currentSession.staffId,
-          clinicType: currentSession.clinicType,
-          meetingType: currentSession.meetingType,
-          showStatus: currentSession.showStatus,
-          serviceAgeGroup: currentSession.serviceAgeGroup,
-          count: currentSession.count,
-          duration: currentSession.duration,
-          month: currentPeriod.month,
-          year: currentPeriod.year,
-        });
-      } else {
-        await addClinicalSession({
-          staffId: currentSession.staffId,
-          clinicType: currentSession.clinicType,
-          meetingType: currentSession.meetingType,
-          showStatus: currentSession.showStatus,
-          serviceAgeGroup: currentSession.serviceAgeGroup,
-          count: currentSession.count,
-          duration: currentSession.duration,
-          month: currentPeriod.month,
-          year: currentPeriod.year,
-        });
-      }
-      handleCloseSessionDialog();
-    } catch (error) {
-      console.error("Error with session operation:", error);
-    }
-  };
-
-  // Handle admin staff form submission
-  const handleAdminStaffSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    try {
-      if (isAdminEditing && currentAdminStaff.id) {
-        await updateAdminStaff({
-          id: currentAdminStaff.id,
-          name: currentAdminStaff.name,
-          role: currentAdminStaff.role,
-          baseSalary: currentAdminStaff.baseSalary,
-          commission: currentAdminStaff.commission,
-          month: currentPeriod.month,
-          year: currentPeriod.year,
-        });
-      } else {
-        await addAdminStaff({
-          name: currentAdminStaff.name,
-          role: currentAdminStaff.role,
-          baseSalary: currentAdminStaff.baseSalary,
-          commission: currentAdminStaff.commission,
-          month: currentPeriod.month,
-          year: currentPeriod.year,
-        });
-      }
-      handleCloseAdminDialog();
-    } catch (error) {
-      console.error("Error with admin staff operation:", error);
-    }
-  };
-
-  // Edit an overhead
-  const handleEditOverhead = (overhead: typeof currentOverhead) => {
-    setCurrentOverhead(overhead);
-    setIsEditing(true);
-    setIsOverheadDialogOpen(true);
-  };
-
-  // Edit a clinical session
-  const handleEditSession = (session: ClinicalSession) => {
-    setCurrentSession(session);
-    setIsSessionEditing(true);
-    setIsSessionDialogOpen(true);
-  };
-
-  // Edit admin staff
-  const handleEditAdminStaff = (staff: AdminStaffFinancials) => {
-    setCurrentAdminStaff(staff);
-    setIsAdminEditing(true);
-    setIsAdminDialogOpen(true);
-  };
-
-  // Delete an overhead
-  const handleDeleteOverhead = (id: string) => {
-    if (confirm("Are you sure you want to delete this overhead expense?")) {
-      deleteFixedOverhead(id);
-    }
-  };
-
-  // Delete a clinical session
-  const handleDeleteSession = async (id: string) => {
-    if (confirm("Are you sure you want to delete this clinical session?")) {
-      await deleteClinicalSession(id);
-    }
-  };
-
-  // Delete admin staff
-  const handleDeleteAdminStaff = async (id: string) => {
-    if (confirm("Are you sure you want to delete this admin staff member?")) {
-      await deleteAdminStaff(id);
-    }
-  };
-
-  // Open dialog for adding new overhead
-  const handleAddNewOverhead = () => {
-    setCurrentOverhead({
-      id: "",
-      name: "",
-      monthlyCost: 0,
-      month: currentPeriod.month,
-      year: currentPeriod.year,
-    });
-    setIsEditing(false);
-    setIsOverheadDialogOpen(true);
-  };
-
-  // Open dialog for adding new clinical session
-  const handleAddNewSession = () => {
-    setCurrentSession({
-      staffId: staffMembers.length > 0 ? staffMembers[0].id : "",
-      clinicType: "MCB" as ClinicType,
-      meetingType: "Intake" as MeetingType,
-      showStatus: "Show" as ShowStatus,
-      serviceAgeGroup: "Adult" as ServiceType,
-      count: 1,
-      duration: 60,
-      month: currentPeriod.month,
-      year: currentPeriod.year,
-    });
-    setIsSessionEditing(false);
-    setIsSessionDialogOpen(true);
-  };
-
-  // Open dialog for adding new admin staff
-  const handleAddNewAdminStaff = () => {
-    setCurrentAdminStaff({
-      name: "",
-      role: "",
-      baseSalary: 0,
-      commission: 0,
-      month: currentPeriod.month,
-      year: currentPeriod.year,
-    });
-    setIsAdminEditing(false);
-    setIsAdminDialogOpen(true);
-  };
-
-  // Close overhead dialog and reset form
-  const handleCloseOverheadDialog = () => {
-    setIsOverheadDialogOpen(false);
-  };
-
-  // Close clinical session dialog and reset form
-  const handleCloseSessionDialog = () => {
-    setIsSessionDialogOpen(false);
-  };
-
-  // Close admin dialog and reset form
-  const handleCloseAdminDialog = () => {
-    setIsAdminDialogOpen(false);
-  };
-
-  // Helper to find staff name by ID
-  const getStaffNameById = (id: string) => {
-    const staff = staffMembers.find(s => s.id === id);
-    return staff ? staff.name : "Unknown Staff";
-  };
-
   // Toggle staff detail breakdown
   const toggleStaffDetailBreakdown = (staffId: string) => {
     setStaffDetailBreakdowns(prev => ({
@@ -467,33 +148,37 @@ const ExpensesPage: React.FC = () => {
     }));
   };
 
-  // Add the missing handleImportSessions function
-  const handleImportSessions = async (sessions: any[]) => {
-    try {
-      for (const session of sessions) {
-        await addClinicalSession({
-          staffId: session.staffId,
-          clinicType: session.clinicType,
-          meetingType: session.meetingType,
-          showStatus: session.showStatus,
-          serviceAgeGroup: session.serviceAgeGroup || "Adult",
-          count: session.count,
-          duration: session.duration,
-          month: currentPeriod.month,
-          year: currentPeriod.year,
-        });
-      }
-      toast({
-        title: "Import Successful",
-        description: `${sessions.length} clinical sessions imported successfully.`,
-      });
-    } catch (error) {
-      console.error("Error importing sessions:", error);
-      toast({
-        title: "Import Failed",
-        description: "There was an error importing the sessions. Please try again.",
-        variant: "destructive",
-      });
+  // Overhead handlers
+  const handleAddNewOverhead = () => {
+    setEditingOverhead(null);
+    setIsOverheadDialogOpen(true);
+  };
+
+  const handleEditOverhead = (overhead: any) => {
+    setEditingOverhead(overhead);
+    setIsOverheadDialogOpen(true);
+  };
+
+  const handleDeleteOverhead = (id: string) => {
+    if (confirm("Are you sure you want to delete this overhead expense?")) {
+      deleteFixedOverhead(id);
+    }
+  };
+
+  // Admin staff handlers
+  const handleAddNewAdminStaff = () => {
+    setEditingAdminStaff(null);
+    setIsAdminDialogOpen(true);
+  };
+
+  const handleEditAdminStaff = (staff: any) => {
+    setEditingAdminStaff(staff);
+    setIsAdminDialogOpen(true);
+  };
+
+  const handleDeleteAdminStaff = async (id: string) => {
+    if (confirm("Are you sure you want to delete this admin staff member?")) {
+      await deleteAdminStaff(id);
     }
   };
 
@@ -517,637 +202,66 @@ const ExpensesPage: React.FC = () => {
         </TabsList>
 
         <TabsContent value="summary">
-          <Card className="shadow-sm">
-            <CardHeader>
-              <CardTitle className="text-lg font-medium">Expense Summary</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Category</TableHead>
-                    <TableHead className="text-right">Amount</TableHead>
-                    <TableHead className="text-right">% of Total</TableHead>
-                    <TableHead className="w-10"></TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {/* Clinical Staff Costs */}
-                  <TableRow>
-                    <TableCell>
-                      <Collapsible open={clinicalBreakdownOpen} onOpenChange={setClinicalBreakdownOpen}>
-                        <CollapsibleTrigger className="flex items-center gap-2 hover:text-blue-600">
-                          {clinicalBreakdownOpen ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
-                          Clinical Staff Costs
-                        </CollapsibleTrigger>
-                      </Collapsible>
-                    </TableCell>
-                    <TableCell className="text-right">{formatCurrency(calculations.totalClinicalCosts)}</TableCell>
-                    <TableCell className="text-right">
-                      {calculations.totalExpenses > 0 ? (calculations.totalClinicalCosts / calculations.totalExpenses * 100).toFixed(1) : 0}%
-                    </TableCell>
-                    <TableCell></TableCell>
-                  </TableRow>
-                  
-                  {/* Clinical Staff Breakdown */}
-                  <Collapsible open={clinicalBreakdownOpen} onOpenChange={setClinicalBreakdownOpen}>
-                    <CollapsibleContent>
-                      {Object.entries(calculations.clinicalBreakdown).map(([staffId, data]) => (
-                        <React.Fragment key={staffId}>
-                          <TableRow className="bg-gray-50">
-                            <TableCell className="pl-8 text-sm text-gray-600">
-                              <button 
-                                onClick={() => toggleStaffDetailBreakdown(staffId)}
-                                className="flex items-center gap-2 hover:text-blue-600"
-                              >
-                                {staffDetailBreakdowns[staffId] ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
-                                {data.name} ({data.totalSessionCount} sessions)
-                              </button>
-                            </TableCell>
-                            <TableCell className="text-right text-sm">{formatCurrency(data.totalCost)}</TableCell>
-                            <TableCell className="text-right text-sm">
-                              {calculations.totalClinicalCosts > 0 ? (data.totalCost / calculations.totalClinicalCosts * 100).toFixed(1) : 0}%
-                            </TableCell>
-                            <TableCell></TableCell>
-                          </TableRow>
-                          
-                          {/* Detailed Session Breakdown */}
-                          {staffDetailBreakdowns[staffId] && (
-                            <TableRow className="bg-blue-25">
-                              <TableCell colSpan={4} className="pl-12">
-                                <div className="space-y-1">
-                                  <div className="text-xs font-medium text-gray-700 mb-2">Session Details:</div>
-                                  {Object.entries(data.sessionTypeBreakdown).map(([sessionType, breakdown]) => (
-                                    <div key={sessionType} className="flex justify-between text-xs text-gray-600">
-                                      <span>{sessionType}: {breakdown.count} sessions @ {formatCurrency(breakdown.rate)} each</span>
-                                      <span>{formatCurrency(breakdown.cost)}</span>
-                                    </div>
-                                  ))}
-                                  <div className="border-t border-gray-200 pt-1 mt-2">
-                                    <div className="flex justify-between text-xs font-medium text-gray-700">
-                                      <span>Total: {data.totalSessionCount} sessions</span>
-                                      <span>{formatCurrency(data.totalCost)}</span>
-                                    </div>
-                                  </div>
-                                </div>
-                              </TableCell>
-                            </TableRow>
-                          )}
-                        </React.Fragment>
-                      ))}
-                    </CollapsibleContent>
-                  </Collapsible>
-
-                  {/* Administrative Staff Costs */}
-                  <TableRow>
-                    <TableCell>
-                      <Collapsible open={adminBreakdownOpen} onOpenChange={setAdminBreakdownOpen}>
-                        <CollapsibleTrigger className="flex items-center gap-2 hover:text-blue-600">
-                          {adminBreakdownOpen ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
-                          Administrative Staff Costs
-                        </CollapsibleTrigger>
-                      </Collapsible>
-                    </TableCell>
-                    <TableCell className="text-right">{formatCurrency(calculations.totalAdminCosts)}</TableCell>
-                    <TableCell className="text-right">
-                      {calculations.totalExpenses > 0 ? (calculations.totalAdminCosts / calculations.totalExpenses * 100).toFixed(1) : 0}%
-                    </TableCell>
-                    <TableCell></TableCell>
-                  </TableRow>
-                  
-                  {/* Admin Staff Breakdown */}
-                  <Collapsible open={adminBreakdownOpen} onOpenChange={setAdminBreakdownOpen}>
-                    <CollapsibleContent>
-                      {filteredData.filteredAdminStaff.map((staff) => (
-                        <TableRow key={staff.id} className="bg-gray-50">
-                          <TableCell className="pl-8 text-sm text-gray-600">
-                            {staff.name} - {staff.role}
-                          </TableCell>
-                          <TableCell className="text-right text-sm">
-                            {formatCurrency((Number(staff.baseSalary) || 0) + (Number(staff.commission) || 0))}
-                            <div className="text-xs text-gray-500">
-                              Salary: {formatCurrency(Number(staff.baseSalary) || 0)} + Commission: {formatCurrency(Number(staff.commission) || 0)}
-                            </div>
-                          </TableCell>
-                          <TableCell className="text-right text-sm">
-                            {calculations.totalAdminCosts > 0 ? (((Number(staff.baseSalary) || 0) + (Number(staff.commission) || 0)) / calculations.totalAdminCosts * 100).toFixed(1) : 0}%
-                          </TableCell>
-                          <TableCell></TableCell>
-                        </TableRow>
-                      ))}
-                    </CollapsibleContent>
-                  </Collapsible>
-
-                  {/* Fixed Overheads */}
-                  <TableRow>
-                    <TableCell>
-                      <Collapsible open={overheadBreakdownOpen} onOpenChange={setOverheadBreakdownOpen}>
-                        <CollapsibleTrigger className="flex items-center gap-2 hover:text-blue-600">
-                          {overheadBreakdownOpen ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
-                          Fixed Overheads
-                        </CollapsibleTrigger>
-                      </Collapsible>
-                    </TableCell>
-                    <TableCell className="text-right">{formatCurrency(calculations.totalFixedOverheads)}</TableCell>
-                    <TableCell className="text-right">
-                      {calculations.totalExpenses > 0 ? (calculations.totalFixedOverheads / calculations.totalExpenses * 100).toFixed(1) : 0}%
-                    </TableCell>
-                    <TableCell></TableCell>
-                  </TableRow>
-                  
-                  {/* Fixed Overheads Breakdown */}
-                  <Collapsible open={overheadBreakdownOpen} onOpenChange={setOverheadBreakdownOpen}>
-                    <CollapsibleContent>
-                      {filteredData.filteredOverheads.map((overhead) => (
-                        <TableRow key={overhead.id} className="bg-gray-50">
-                          <TableCell className="pl-8 text-sm text-gray-600">
-                            {overhead.name}
-                          </TableCell>
-                          <TableCell className="text-right text-sm">{formatCurrency(Number(overhead.monthlyCost) || 0)}</TableCell>
-                          <TableCell className="text-right text-sm">
-                            {calculations.totalFixedOverheads > 0 ? ((Number(overhead.monthlyCost) || 0) / calculations.totalFixedOverheads * 100).toFixed(1) : 0}%
-                          </TableCell>
-                          <TableCell></TableCell>
-                        </TableRow>
-                      ))}
-                    </CollapsibleContent>
-                  </Collapsible>
-
-                  {/* Total */}
-                  <TableRow className="border-t-2 border-gray-300">
-                    <TableCell className="font-bold">Total Expenses</TableCell>
-                    <TableCell className="text-right font-bold">{formatCurrency(calculations.totalExpenses)}</TableCell>
-                    <TableCell className="text-right font-bold">100%</TableCell>
-                    <TableCell></TableCell>
-                  </TableRow>
-                </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
+          <ExpenseSummaryCard
+            calculations={calculations}
+            filteredData={filteredData}
+            clinicalBreakdownOpen={clinicalBreakdownOpen}
+            setClinicalBreakdownOpen={setClinicalBreakdownOpen}
+            adminBreakdownOpen={adminBreakdownOpen}
+            setAdminBreakdownOpen={setAdminBreakdownOpen}
+            overheadBreakdownOpen={overheadBreakdownOpen}
+            setOverheadBreakdownOpen={setOverheadBreakdownOpen}
+            staffDetailBreakdowns={staffDetailBreakdowns}
+            toggleStaffDetailBreakdown={toggleStaffDetailBreakdown}
+            formatCurrency={formatCurrency}
+          />
         </TabsContent>
 
         <TabsContent value="fixed">
-          <div className="flex justify-end mb-4">
-            <Button onClick={handleAddNewOverhead}>
-              <Plus className="mr-2 h-4 w-4" /> Add Fixed Overhead
-            </Button>
-          </div>
-
-          <Card className="shadow-sm">
-            <CardHeader>
-              <CardTitle className="text-lg font-medium">Fixed Overheads</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Overhead Name</TableHead>
-                    <TableHead className="text-right">Monthly Cost</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredData.filteredOverheads.map((overhead) => (
-                    <TableRow key={overhead.id}>
-                      <TableCell>{overhead.name}</TableCell>
-                      <TableCell className="text-right">{formatCurrency(Number(overhead.monthlyCost) || 0)}</TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex justify-end gap-2">
-                          <Button variant="ghost" size="icon" onClick={() => handleEditOverhead(overhead)}>
-                            <Pencil className="h-4 w-4" />
-                          </Button>
-                          <Button variant="ghost" size="icon" onClick={() => handleDeleteOverhead(overhead.id)}>
-                            <Trash className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                  <TableRow>
-                    <TableCell className="font-bold">Total Fixed Overheads</TableCell>
-                    <TableCell className="text-right font-bold">
-                      {formatCurrency(calculations.totalFixedOverheads)}
-                    </TableCell>
-                    <TableCell></TableCell>
-                  </TableRow>
-                </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
+          <FixedOverheadsTab
+            filteredOverheads={filteredData.filteredOverheads}
+            calculations={calculations}
+            formatCurrency={formatCurrency}
+            onAddNew={handleAddNewOverhead}
+            onEdit={handleEditOverhead}
+            onDelete={handleDeleteOverhead}
+          />
         </TabsContent>
 
         <TabsContent value="clinical">
-          <div className="flex justify-between mb-4">
-            <ExcelImporter 
-              staffMembers={staffMembers}
-              currentPeriod={currentPeriod}
-              onImport={handleImportSessions}
-            />
-            <Button onClick={handleAddNewSession}>
-              <Plus className="mr-2 h-4 w-4" /> Add Clinical Session
-            </Button>
-          </div>
-
-          <Card className="shadow-sm">
-            <CardHeader>
-              <CardTitle className="text-lg font-medium">
-                Clinical Staff Sessions ({filteredData.filteredSessions.reduce((sum, session) => sum + (Number(session.count) || 0), 0)} total sessions)
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Staff</TableHead>
-                    <TableHead>Clinic</TableHead>
-                    <TableHead>Meeting Type</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead className="text-right">Count</TableHead>
-                    <TableHead className="text-right">Duration (min)</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredData.filteredSessions.length > 0 ? (
-                    filteredData.filteredSessions.map((session) => (
-                      <TableRow key={session.id}>
-                        <TableCell>{getStaffNameById(session.staffId)}</TableCell>
-                        <TableCell>{session.clinicType}</TableCell>
-                        <TableCell>{session.meetingType}</TableCell>
-                        <TableCell>{session.showStatus}</TableCell>
-                        <TableCell className="text-right">{session.count}</TableCell>
-                        <TableCell className="text-right">{session.duration}</TableCell>
-                        <TableCell className="text-right">
-                          <div className="flex justify-end gap-2">
-                            <Button variant="ghost" size="icon" onClick={() => handleEditSession(session)}>
-                              <Pencil className="h-4 w-4" />
-                            </Button>
-                            <Button variant="ghost" size="icon" onClick={() => handleDeleteSession(session.id)}>
-                              <Trash className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))
-                  ) : (
-                    <TableRow>
-                      <TableCell colSpan={7} className="text-center py-4">No clinical sessions recorded for this period</TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
-
-          {staffMembers.filter(s => s.role === "Psychiatrist" || s.role === "CaseManager").length > 0 ? (
-            <div className="mt-6">
-              <Card className="shadow-sm">
-                <CardHeader>
-                  <CardTitle className="text-lg font-medium">Session Summary by Staff</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Staff Member</TableHead>
-                        <TableHead className="text-right">Intakes</TableHead>
-                        <TableHead className="text-right">Follow-Ups</TableHead>
-                        <TableHead className="text-right">No-Shows</TableHead>
-                        <TableHead className="text-right">Total Sessions</TableHead>
-                        <TableHead className="text-right">Total Hours</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {staffMembers
-                        .filter(staff => staff.role === "Psychiatrist" || staff.role === "CaseManager")
-                        .map(staff => {
-                          const staffSessions = filteredData.filteredSessions.filter(s => s.staffId === staff.id);
-                          const intakes = staffSessions.filter(s => s.meetingType === "Intake").reduce((sum, s) => sum + (Number(s.count) || 0), 0);
-                          const followUps = staffSessions.filter(s => s.meetingType === "FollowUp").reduce((sum, s) => sum + (Number(s.count) || 0), 0);
-                          const noShows = staffSessions.filter(s => s.showStatus === "NoShow").reduce((sum, s) => sum + (Number(s.count) || 0), 0);
-                          const totalSessions = staffSessions.reduce((sum, s) => sum + (Number(s.count) || 0), 0);
-                          const totalMinutes = staffSessions.reduce((sum, s) => sum + ((Number(s.count) || 0) * (Number(s.duration) || 0)), 0);
-                          const totalHours = Math.round(totalMinutes / 60 * 10) / 10;
-
-                          return (
-                            <TableRow key={staff.id}>
-                              <TableCell>{staff.name}</TableCell>
-                              <TableCell className="text-right">{intakes}</TableCell>
-                              <TableCell className="text-right">{followUps}</TableCell>
-                              <TableCell className="text-right">{noShows}</TableCell>
-                              <TableCell className="text-right">{totalSessions}</TableCell>
-                              <TableCell className="text-right">{totalHours}</TableCell>
-                            </TableRow>
-                          );
-                        })}
-                    </TableBody>
-                  </Table>
-                </CardContent>
-              </Card>
-            </div>
-          ) : null}
+          <ClinicalStaffTab />
         </TabsContent>
 
         <TabsContent value="admin">
-          <div className="flex justify-end mb-4">
-            <Button onClick={handleAddNewAdminStaff}>
-              <Plus className="mr-2 h-4 w-4" /> Add Admin Staff
-            </Button>
-          </div>
-
-          <Card className="shadow-sm">
-            <CardHeader>
-              <CardTitle className="text-lg font-medium">Administrative Staff Costs</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Name</TableHead>
-                    <TableHead>Role</TableHead>
-                    <TableHead className="text-right">Base Salary</TableHead>
-                    <TableHead className="text-right">Commission</TableHead>
-                    <TableHead className="text-right">Total</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredData.filteredAdminStaff.map((staff) => (
-                    <TableRow key={staff.id}>
-                      <TableCell>{staff.name}</TableCell>
-                      <TableCell>{staff.role}</TableCell>
-                      <TableCell className="text-right">{formatCurrency(Number(staff.baseSalary) || 0)}</TableCell>
-                      <TableCell className="text-right">{formatCurrency(Number(staff.commission) || 0)}</TableCell>
-                      <TableCell className="text-right">{formatCurrency((Number(staff.baseSalary) || 0) + (Number(staff.commission) || 0))}</TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex justify-end gap-2">
-                          <Button variant="ghost" size="icon" onClick={() => handleEditAdminStaff(staff)}>
-                            <Pencil className="h-4 w-4" />
-                          </Button>
-                          <Button variant="ghost" size="icon" onClick={() => handleDeleteAdminStaff(staff.id)}>
-                            <Trash className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                  <TableRow>
-                    <TableCell colSpan={4} className="font-bold">Total Administrative Staff Costs</TableCell>
-                    <TableCell className="text-right font-bold">
-                      {formatCurrency(calculations.totalAdminCosts)}
-                    </TableCell>
-                    <TableCell></TableCell>
-                  </TableRow>
-                </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
+          <AdminStaffTab
+            filteredAdminStaff={filteredData.filteredAdminStaff}
+            calculations={calculations}
+            formatCurrency={formatCurrency}
+            onAddNew={handleAddNewAdminStaff}
+            onEdit={handleEditAdminStaff}
+            onDelete={handleDeleteAdminStaff}
+          />
         </TabsContent>
       </Tabs>
 
-      {/* Dialog for Fixed Overhead */}
-      <Dialog open={isOverheadDialogOpen} onOpenChange={setIsOverheadDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>{isEditing ? "Edit Fixed Overhead" : "Add Fixed Overhead"}</DialogTitle>
-          </DialogHeader>
-          <form onSubmit={handleOverheadSubmit}>
-            <div className="space-y-4 py-2">
-              <div className="grid w-full items-center gap-2">
-                <Label htmlFor="name">Overhead Name</Label>
-                <Input 
-                  id="name"
-                  name="name"
-                  value={currentOverhead.name}
-                  onChange={handleOverheadChange}
-                  required
-                />
-              </div>
-              <div className="grid w-full items-center gap-2">
-                <Label htmlFor="monthlyCost">Monthly Cost (ILS)</Label>
-                <Input 
-                  id="monthlyCost"
-                  name="monthlyCost"
-                  type="number"
-                  value={currentOverhead.monthlyCost}
-                  onChange={handleOverheadChange}
-                  required
-                  min={0}
-                />
-              </div>
-            </div>
-            <DialogFooter className="mt-4">
-              <Button type="button" variant="outline" onClick={handleCloseOverheadDialog}>
-                Cancel
-              </Button>
-              <Button type="submit">
-                {isEditing ? "Update" : "Add"}
-              </Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
+      {/* Dialogs */}
+      <OverheadDialog
+        isOpen={isOverheadDialogOpen}
+        onClose={() => setIsOverheadDialogOpen(false)}
+        editingOverhead={editingOverhead}
+        currentPeriod={currentPeriod}
+        onAdd={addFixedOverhead}
+        onUpdate={updateFixedOverhead}
+      />
 
-      {/* Dialog for Clinical Sessions */}
-      <Dialog open={isSessionDialogOpen} onOpenChange={setIsSessionDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>{isSessionEditing ? "Edit Clinical Session" : "Add Clinical Session"}</DialogTitle>
-          </DialogHeader>
-          <form onSubmit={handleSessionSubmit}>
-            <div className="space-y-4 py-2">
-              <div className="grid w-full items-center gap-2">
-                <Label htmlFor="staffId">Staff Member</Label>
-                <Select 
-                  value={currentSession.staffId} 
-                  onValueChange={(value) => handleSessionChange("staffId", value)}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select Staff Member" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {staffMembers
-                      .filter(staff => staff.role === "Psychiatrist" || staff.role === "CaseManager")
-                      .map(staff => (
-                        <SelectItem key={staff.id} value={staff.id}>
-                          {staff.name} ({staff.role})
-                        </SelectItem>
-                      ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              
-              <div className="grid w-full items-center gap-2">
-                <Label htmlFor="clinicType">Clinic Type</Label>
-                <Select 
-                  value={currentSession.clinicType} 
-                  onValueChange={(value) => handleSessionChange("clinicType", value)}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select Clinic Type" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="MCB">MCB</SelectItem>
-                    <SelectItem value="PRV">PRV</SelectItem>
-                    <SelectItem value="MHS">MHS</SelectItem>
-                    <SelectItem value="MHN">MHN</SelectItem>
-                    <SelectItem value="MHY">MHY</SelectItem>
-                    <SelectItem value="MSY">MSY</SelectItem>
-                    <SelectItem value="SPC">SPC</SelectItem>
-                    <SelectItem value="MHB">MHB</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              
-              <div className="grid w-full items-center gap-2">
-                <Label htmlFor="meetingType">Meeting Type</Label>
-                <Select 
-                  value={currentSession.meetingType} 
-                  onValueChange={(value) => handleSessionChange("meetingType", value)}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select Meeting Type" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Intake">Intake</SelectItem>
-                    <SelectItem value="FollowUp">Follow-Up</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              
-              <div className="grid w-full items-center gap-2">
-                <Label htmlFor="showStatus">Show Status</Label>
-                <Select 
-                  value={currentSession.showStatus} 
-                  onValueChange={(value) => handleSessionChange("showStatus", value)}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select Status" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Show">Show</SelectItem>
-                    <SelectItem value="NoShow">No Show</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="grid w-full items-center gap-2">
-                <Label htmlFor="serviceAgeGroup">Service Age Group</Label>
-                <Select 
-                  value={currentSession.serviceAgeGroup} 
-                  onValueChange={(value) => handleSessionChange("serviceAgeGroup", value)}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select Age Group" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Adult">Adult</SelectItem>
-                    <SelectItem value="Child">Child</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              
-              <div className="grid w-full items-center gap-2">
-                <Label htmlFor="count">Count (number of sessions)</Label>
-                <Input 
-                  id="count"
-                  type="number"
-                  value={currentSession.count}
-                  onChange={(e) => handleSessionChange("count", parseInt(e.target.value) || 1)}
-                  required
-                  min={1}
-                />
-              </div>
-              
-              <div className="grid w-full items-center gap-2">
-                <Label htmlFor="duration">Duration (minutes)</Label>
-                <Input 
-                  id="duration"
-                  type="number"
-                  value={currentSession.duration}
-                  onChange={(e) => handleSessionChange("duration", parseInt(e.target.value) || 30)}
-                  required
-                  min={15}
-                  step={5}
-                />
-              </div>
-            </div>
-            <DialogFooter className="mt-4">
-              <Button type="button" variant="outline" onClick={handleCloseSessionDialog}>
-                Cancel
-              </Button>
-              <Button type="submit">
-                {isSessionEditing ? "Update" : "Add"}
-              </Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
-
-      {/* Dialog for Admin Staff */}
-      <Dialog open={isAdminDialogOpen} onOpenChange={setIsAdminDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>{isAdminEditing ? "Edit Admin Staff" : "Add Admin Staff"}</DialogTitle>
-          </DialogHeader>
-          <form onSubmit={handleAdminStaffSubmit}>
-            <div className="space-y-4 py-2">
-              <div className="grid w-full items-center gap-2">
-                <Label htmlFor="name">Name</Label>
-                <Input 
-                  id="name"
-                  name="name"
-                  value={currentAdminStaff.name}
-                  onChange={handleAdminStaffChange}
-                  required
-                />
-              </div>
-              <div className="grid w-full items-center gap-2">
-                <Label htmlFor="role">Role</Label>
-                <Input 
-                  id="role"
-                  name="role"
-                  value={currentAdminStaff.role}
-                  onChange={handleAdminStaffChange}
-                  required
-                />
-              </div>
-              <div className="grid w-full items-center gap-2">
-                <Label htmlFor="baseSalary">Base Salary (ILS)</Label>
-                <Input 
-                  id="baseSalary"
-                  name="baseSalary"
-                  type="number"
-                  value={currentAdminStaff.baseSalary}
-                  onChange={handleAdminStaffChange}
-                  required
-                  min={0}
-                />
-              </div>
-              <div className="grid w-full items-center gap-2">
-                <Label htmlFor="commission">Commission (ILS)</Label>
-                <Input 
-                  id="commission"
-                  name="commission"
-                  type="number"
-                  value={currentAdminStaff.commission}
-                  onChange={handleAdminStaffChange}
-                  required
-                  min={0}
-                />
-              </div>
-            </div>
-            <DialogFooter className="mt-4">
-              <Button type="button" variant="outline" onClick={handleCloseAdminDialog}>
-                Cancel
-              </Button>
-              <Button type="submit">
-                {isAdminEditing ? "Update" : "Add"}
-              </Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
+      <AdminStaffDialog
+        isOpen={isAdminDialogOpen}
+        onClose={() => setIsAdminDialogOpen(false)}
+        editingStaff={editingAdminStaff}
+        currentPeriod={currentPeriod}
+        onAdd={addAdminStaff}
+        onUpdate={updateAdminStaff}
+      />
     </div>
   );
 };

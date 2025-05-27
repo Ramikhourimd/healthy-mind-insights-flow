@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Form, FormControl, FormField, FormItem, FormLabel } from "@/components/ui/form";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useForm } from "react-hook-form";
-import { ClinicalSession, ClinicType, MeetingType, ShowStatus, StaffMember } from "@/types/finance";
+import { ClinicalSession, ClinicType, MeetingType, ShowStatus, ServiceType } from "@/types/finance";
 import { FilePlus, Edit, Trash2, Users } from "lucide-react";
 
 // Session form type
@@ -20,6 +20,7 @@ type SessionFormValues = {
   clinicType: ClinicType;
   meetingType: MeetingType;
   showStatus: ShowStatus;
+  serviceAgeGroup: ServiceType;
   count: number;
   duration: number;
 };
@@ -46,6 +47,7 @@ const ClinicalSessionsPage: React.FC = () => {
       clinicType: "MCB",
       meetingType: "Intake",
       showStatus: "Show",
+      serviceAgeGroup: "Adult",
       count: 1,
       duration: 60
     }
@@ -59,6 +61,7 @@ const ClinicalSessionsPage: React.FC = () => {
       clinicType: "MCB",
       meetingType: "Intake",
       showStatus: "Show",
+      serviceAgeGroup: "Adult",
       count: 1,
       duration: 60
     });
@@ -74,6 +77,7 @@ const ClinicalSessionsPage: React.FC = () => {
       clinicType: session.clinicType,
       meetingType: session.meetingType,
       showStatus: session.showStatus,
+      serviceAgeGroup: session.serviceAgeGroup,
       count: session.count,
       duration: session.duration
     });
@@ -143,6 +147,7 @@ const ClinicalSessionsPage: React.FC = () => {
                 <TableHead>Clinic</TableHead>
                 <TableHead>Meeting Type</TableHead>
                 <TableHead>Status</TableHead>
+                <TableHead>Age Group</TableHead>
                 <TableHead>Count</TableHead>
                 <TableHead>Duration (min)</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
@@ -161,6 +166,9 @@ const ClinicalSessionsPage: React.FC = () => {
                     </Badge>
                   </TableCell>
                   <TableCell>{getShowStatusBadge(session.showStatus)}</TableCell>
+                  <TableCell>
+                    <Badge variant="secondary">{session.serviceAgeGroup}</Badge>
+                  </TableCell>
                   <TableCell>{session.count}</TableCell>
                   <TableCell>{session.duration}</TableCell>
                   <TableCell className="text-right">
@@ -184,7 +192,7 @@ const ClinicalSessionsPage: React.FC = () => {
               ))}
               {currentPeriodSessions.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center py-6 text-muted-foreground">
+                  <TableCell colSpan={8} className="text-center py-6 text-muted-foreground">
                     No sessions recorded for the current period. Click "Add Session" to create one.
                   </TableCell>
                 </TableRow>
@@ -311,6 +319,30 @@ const ClinicalSessionsPage: React.FC = () => {
                   )}
                 />
               </div>
+
+              <FormField
+                control={form.control}
+                name="serviceAgeGroup"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Service Age Group</FormLabel>
+                    <Select
+                      onValueChange={field.onChange}
+                      defaultValue={field.value}
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select age group" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="Adult">Adult</SelectItem>
+                        <SelectItem value="Child">Child</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </FormItem>
+                )}
+              />
               
               <div className="grid grid-cols-2 gap-4">
                 <FormField
