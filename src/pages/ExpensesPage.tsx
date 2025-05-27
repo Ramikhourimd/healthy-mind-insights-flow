@@ -32,12 +32,23 @@ import { ClinicType, MeetingType, ShowStatus, ClinicalSession } from "@/types/fi
 import ExcelImporter from "@/components/excel/ExcelImporter";
 import { useToast } from "@/components/ui/use-toast";
 
+// Add admin staff type
+type AdminStaff = {
+  id: string;
+  name: string;
+  role: string;
+  baseSalary: number;
+  commission: number;
+  month: number;
+  year: number;
+};
+
 const ExpensesPage: React.FC = () => {
   const { toast } = useToast();
   const { 
     fixedOverheads, 
     addFixedOverhead, 
-    updateFixedOverhead, 
+    updateFixedOveroverhead, 
     deleteFixedOverhead, 
     currentPeriod, 
     financialSummary,
@@ -52,9 +63,36 @@ const ExpensesPage: React.FC = () => {
   // State to track sessions
   const [displayedSessions, setDisplayedSessions] = useState<ClinicalSession[]>([]);
   
+  // Admin staff state
+  const [adminStaff, setAdminStaff] = useState<AdminStaff[]>([
+    {
+      id: "1",
+      name: "Shira Lachmann",
+      role: "Clinic Manager",
+      baseSalary: 15000,
+      commission: 2500,
+      month: currentPeriod.month,
+      year: currentPeriod.year,
+    },
+    {
+      id: "2",
+      name: "Maya Cohen",
+      role: "Admin Assistant",
+      baseSalary: 8500,
+      commission: 0,
+      month: currentPeriod.month,
+      year: currentPeriod.year,
+    }
+  ]);
+  
   // Filter overheads for current period
   const filteredOverheads = fixedOverheads.filter(
     overhead => overhead.month === currentPeriod.month && overhead.year === currentPeriod.year
+  );
+
+  // Filter admin staff for current period
+  const filteredAdminStaff = adminStaff.filter(
+    staff => staff.month === currentPeriod.month && staff.year === currentPeriod.year
   );
 
   // Update displayed sessions whenever the source data changes
@@ -93,6 +131,18 @@ const ExpensesPage: React.FC = () => {
     year: currentPeriod.year,
   });
 
+  // State for the admin staff form
+  const [isAdminDialogOpen, setIsAdminDialogOpen] = useState(false);
+  const [isAdminEditing, setIsAdminEditing] = useState(false);
+  const [currentAdminStaff, setCurrentAdminStaff] = useState<Omit<AdminStaff, "id"> & { id?: string }>({
+    name: "",
+    role: "",
+    baseSalary: 0,
+    commission: 0,
+    month: currentPeriod.month,
+    year: currentPeriod.year,
+  });
+
   // Format currency
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-IL', { 
@@ -117,6 +167,15 @@ const ExpensesPage: React.FC = () => {
     setCurrentSession({
       ...currentSession,
       [name]: value,
+    });
+  };
+
+  // Handle admin staff form changes
+  const handleAdminStaffChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setCurrentAdminStaff({
+      ...currentAdminStaff,
+      [name]: name === "name" || name === "role" ? value : Number(value),
     });
   };
 
@@ -166,6 +225,34 @@ const ExpensesPage: React.FC = () => {
     handleCloseSessionDialog();
   };
 
+  // Handle admin staff form submission
+  const handleAdminStaffSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (isAdminEditing && currentAdminStaff.id) {
+      setAdminStaff(prev => prev.map(staff => 
+        staff.id === currentAdminStaff.id ? { ...currentAdminStaff, id: currentAdminStaff.id } as AdminStaff : staff
+      ));
+      toast({
+        title: "Admin Staff Updated",
+        description: `${currentAdminStaff.name} has been updated.`,
+      });
+    } else {
+      const newId = `admin-${Date.now()}`;
+      const newStaff: AdminStaff = {
+        ...currentAdminStaff,
+        id: newId,
+        month: currentPeriod.month,
+        year: currentPeriod.year,
+      };
+      setAdminStaff(prev => [...prev, newStaff]);
+      toast({
+        title: "Admin Staff Added",
+        description: `${currentAdminStaff.name} has been added.`,
+      });
+    }
+    handleCloseAdminDialog();
+  };
+
   // Edit an overhead
   const handleEditOverhead = (overhead: typeof currentOverhead) => {
     setCurrentOverhead(overhead);
@@ -180,6 +267,13 @@ const ExpensesPage: React.FC = () => {
     setIsSessionDialogOpen(true);
   };
 
+  // Edit admin staff
+  const handleEditAdminStaff = (staff: AdminStaff) => {
+    setCurrentAdminStaff(staff);
+    setIsAdminEditing(true);
+    setIsAdminDialogOpen(true);
+  };
+
   // Delete an overhead
   const handleDeleteOverhead = (id: string) => {
     if (confirm("Are you sure you want to delete this overhead expense?")) {
@@ -191,6 +285,18 @@ const ExpensesPage: React.FC = () => {
   const handleDeleteSession = (id: string) => {
     if (confirm("Are you sure you want to delete this clinical session?")) {
       deleteClinicalSession(id);
+    }
+  };
+
+  // Delete admin staff
+  const handleDeleteAdminStaff = (id: string) => {
+    if (confirm("Are you sure you want to delete this admin staff member?")) {
+      setAdminStaff(prev => prev.filter(staff => staff.id !== id));
+      toast({
+        title: "Admin Staff Deleted",
+        description: "The admin staff member has been removed.",
+        variant: "destructive"
+      });
     }
   };
 
@@ -223,6 +329,20 @@ const ExpensesPage: React.FC = () => {
     setIsSessionDialogOpen(true);
   };
 
+  // Open dialog for adding new admin staff
+  const handleAddNewAdminStaff = () => {
+    setCurrentAdminStaff({
+      name: "",
+      role: "",
+      baseSalary: 0,
+      commission: 0,
+      month: currentPeriod.month,
+      year: currentPeriod.year,
+    });
+    setIsAdminEditing(false);
+    setIsAdminDialogOpen(true);
+  };
+
   // Close overhead dialog and reset form
   const handleCloseOverheadDialog = () => {
     setIsOverheadDialogOpen(false);
@@ -231,6 +351,11 @@ const ExpensesPage: React.FC = () => {
   // Close clinical session dialog and reset form
   const handleCloseSessionDialog = () => {
     setIsSessionDialogOpen(false);
+  };
+
+  // Close admin dialog and reset form
+  const handleCloseAdminDialog = () => {
+    setIsAdminDialogOpen(false);
   };
 
   // Helper to find staff name by ID
@@ -285,6 +410,9 @@ const ExpensesPage: React.FC = () => {
     }
   };
 
+  // Calculate total admin costs
+  const totalAdminCosts = filteredAdminStaff.reduce((sum, staff) => sum + staff.baseSalary + staff.commission, 0);
+
   return (
     <div>
       <div className="flex justify-between items-center mb-6">
@@ -328,9 +456,9 @@ const ExpensesPage: React.FC = () => {
                   </TableRow>
                   <TableRow>
                     <TableCell>Administrative Staff Costs</TableCell>
-                    <TableCell className="text-right">{formatCurrency(financialSummary.totalAdminCosts)}</TableCell>
+                    <TableCell className="text-right">{formatCurrency(totalAdminCosts)}</TableCell>
                     <TableCell className="text-right">
-                      {(financialSummary.totalAdminCosts / financialSummary.totalExpenses * 100).toFixed(1)}%
+                      {(totalAdminCosts / financialSummary.totalExpenses * 100).toFixed(1)}%
                     </TableCell>
                   </TableRow>
                   <TableRow>
@@ -514,12 +642,15 @@ const ExpensesPage: React.FC = () => {
         </TabsContent>
 
         <TabsContent value="admin">
+          <div className="flex justify-end mb-4">
+            <Button onClick={handleAddNewAdminStaff}>
+              <Plus className="mr-2 h-4 w-4" /> Add Admin Staff
+            </Button>
+          </div>
+
           <Card className="shadow-sm">
             <CardHeader>
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-lg font-medium">Administrative Staff Costs</CardTitle>
-                <p className="text-sm text-muted-foreground">(Demo data - will be editable in full version)</p>
-              </div>
+              <CardTitle className="text-lg font-medium">Administrative Staff Costs</CardTitle>
             </CardHeader>
             <CardContent>
               <Table>
@@ -530,28 +661,35 @@ const ExpensesPage: React.FC = () => {
                     <TableHead className="text-right">Base Salary</TableHead>
                     <TableHead className="text-right">Commission</TableHead>
                     <TableHead className="text-right">Total</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  <TableRow>
-                    <TableCell>Shira Lachmann</TableCell>
-                    <TableCell>Clinic Manager</TableCell>
-                    <TableCell className="text-right">{formatCurrency(15000)}</TableCell>
-                    <TableCell className="text-right">{formatCurrency(2500)}</TableCell>
-                    <TableCell className="text-right">{formatCurrency(17500)}</TableCell>
-                  </TableRow>
-                  <TableRow>
-                    <TableCell>Maya Cohen</TableCell>
-                    <TableCell>Admin Assistant</TableCell>
-                    <TableCell className="text-right">{formatCurrency(8500)}</TableCell>
-                    <TableCell className="text-right">{formatCurrency(0)}</TableCell>
-                    <TableCell className="text-right">{formatCurrency(8500)}</TableCell>
-                  </TableRow>
+                  {filteredAdminStaff.map((staff) => (
+                    <TableRow key={staff.id}>
+                      <TableCell>{staff.name}</TableCell>
+                      <TableCell>{staff.role}</TableCell>
+                      <TableCell className="text-right">{formatCurrency(staff.baseSalary)}</TableCell>
+                      <TableCell className="text-right">{formatCurrency(staff.commission)}</TableCell>
+                      <TableCell className="text-right">{formatCurrency(staff.baseSalary + staff.commission)}</TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex justify-end gap-2">
+                          <Button variant="ghost" size="icon" onClick={() => handleEditAdminStaff(staff)}>
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                          <Button variant="ghost" size="icon" onClick={() => handleDeleteAdminStaff(staff.id)}>
+                            <Trash className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
                   <TableRow>
                     <TableCell colSpan={4} className="font-bold">Total Administrative Staff Costs</TableCell>
                     <TableCell className="text-right font-bold">
-                      {formatCurrency(financialSummary.totalAdminCosts)}
+                      {formatCurrency(totalAdminCosts)}
                     </TableCell>
+                    <TableCell></TableCell>
                   </TableRow>
                 </TableBody>
               </Table>
@@ -717,6 +855,71 @@ const ExpensesPage: React.FC = () => {
               </Button>
               <Button type="submit">
                 {isSessionEditing ? "Update" : "Add"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog for Admin Staff */}
+      <Dialog open={isAdminDialogOpen} onOpenChange={setIsAdminDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{isAdminEditing ? "Edit Admin Staff" : "Add Admin Staff"}</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleAdminStaffSubmit}>
+            <div className="space-y-4 py-2">
+              <div className="grid w-full items-center gap-2">
+                <Label htmlFor="name">Name</Label>
+                <Input 
+                  id="name"
+                  name="name"
+                  value={currentAdminStaff.name}
+                  onChange={handleAdminStaffChange}
+                  required
+                />
+              </div>
+              <div className="grid w-full items-center gap-2">
+                <Label htmlFor="role">Role</Label>
+                <Input 
+                  id="role"
+                  name="role"
+                  value={currentAdminStaff.role}
+                  onChange={handleAdminStaffChange}
+                  required
+                />
+              </div>
+              <div className="grid w-full items-center gap-2">
+                <Label htmlFor="baseSalary">Base Salary (ILS)</Label>
+                <Input 
+                  id="baseSalary"
+                  name="baseSalary"
+                  type="number"
+                  value={currentAdminStaff.baseSalary}
+                  onChange={handleAdminStaffChange}
+                  required
+                  min={0}
+                />
+              </div>
+              <div className="grid w-full items-center gap-2">
+                <Label htmlFor="commission">Commission (ILS)</Label>
+                <Input 
+                  id="commission"
+                  name="commission"
+                  type="number"
+                  value={currentAdminStaff.commission}
+                  onChange={handleAdminStaffChange}
+                  required
+                  min={0}
+                />
+              </div>
+            </div>
+            <DialogFooter className="mt-4">
+              <Button type="button" variant="outline" onClick={handleCloseAdminDialog}>
+                Cancel
+              </Button>
+              <Button type="submit">
+                {isAdminEditing ? "Update" : "Add"}
               </Button>
             </DialogFooter>
           </form>
