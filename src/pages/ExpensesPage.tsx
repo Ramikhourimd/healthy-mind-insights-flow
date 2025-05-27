@@ -75,6 +75,7 @@ const ExpensesPage: React.FC = () => {
   const [clinicalBreakdownOpen, setClinicalBreakdownOpen] = useState(false);
   const [adminBreakdownOpen, setAdminBreakdownOpen] = useState(false);
   const [overheadBreakdownOpen, setOverheadBreakdownOpen] = useState(false);
+  const [staffDetailBreakdowns, setStaffDetailBreakdowns] = useState<{ [staffId: string]: boolean }>({});
   
   // State to track sessions
   const [displayedSessions, setDisplayedSessions] = useState<ClinicalSession[]>([]);
@@ -127,7 +128,13 @@ const ExpensesPage: React.FC = () => {
     const { filteredOverheads, filteredAdminStaff, filteredSessions } = filteredData;
 
     // Calculate clinical staff breakdown using the shared utility
-    const clinicalBreakdown: { [staffId: string]: { name: string; sessions: any[]; totalCost: number; totalSessionCount: number } } = {};
+    const clinicalBreakdown: { [staffId: string]: { 
+      name: string; 
+      sessions: any[]; 
+      totalCost: number; 
+      totalSessionCount: number;
+      sessionTypeBreakdown: { [key: string]: { count: number; cost: number; rate: number } };
+    } } = {};
     
     filteredSessions.forEach(session => {
       if (!clinicalBreakdown[session.staffId]) {
@@ -136,7 +143,8 @@ const ExpensesPage: React.FC = () => {
           name: staffMember ? staffMember.name : "Unknown Staff",
           sessions: [],
           totalCost: 0,
-          totalSessionCount: 0
+          totalSessionCount: 0,
+          sessionTypeBreakdown: {}
         };
       }
       
@@ -153,6 +161,20 @@ const ExpensesPage: React.FC = () => {
       }
       
       const rate = (Number(session.count) || 0) > 0 ? sessionCost / (Number(session.count) || 1) : 0;
+      
+      // Create a breakdown key for session type
+      const breakdownKey = `${session.meetingType} - ${session.showStatus}`;
+      
+      if (!clinicalBreakdown[session.staffId].sessionTypeBreakdown[breakdownKey]) {
+        clinicalBreakdown[session.staffId].sessionTypeBreakdown[breakdownKey] = {
+          count: 0,
+          cost: 0,
+          rate: rate
+        };
+      }
+      
+      clinicalBreakdown[session.staffId].sessionTypeBreakdown[breakdownKey].count += (Number(session.count) || 0);
+      clinicalBreakdown[session.staffId].sessionTypeBreakdown[breakdownKey].cost += sessionCost;
       
       clinicalBreakdown[session.staffId].sessions.push({
         ...session,
@@ -432,6 +454,14 @@ const ExpensesPage: React.FC = () => {
     return staff ? staff.name : "Unknown Staff";
   };
 
+  // Toggle staff detail breakdown
+  const toggleStaffDetailBreakdown = (staffId: string) => {
+    setStaffDetailBreakdowns(prev => ({
+      ...prev,
+      [staffId]: !prev[staffId]
+    }));
+  };
+
   // Add the missing handleImportSessions function
   const handleImportSessions = async (sessions: any[]) => {
     try {
@@ -517,16 +547,47 @@ const ExpensesPage: React.FC = () => {
                   <Collapsible open={clinicalBreakdownOpen} onOpenChange={setClinicalBreakdownOpen}>
                     <CollapsibleContent>
                       {Object.entries(calculations.clinicalBreakdown).map(([staffId, data]) => (
-                        <TableRow key={staffId} className="bg-gray-50">
-                          <TableCell className="pl-8 text-sm text-gray-600">
-                            {data.name} ({data.totalSessionCount} sessions)
-                          </TableCell>
-                          <TableCell className="text-right text-sm">{formatCurrency(data.totalCost)}</TableCell>
-                          <TableCell className="text-right text-sm">
-                            {calculations.totalClinicalCosts > 0 ? (data.totalCost / calculations.totalClinicalCosts * 100).toFixed(1) : 0}%
-                          </TableCell>
-                          <TableCell></TableCell>
-                        </TableRow>
+                        <React.Fragment key={staffId}>
+                          <TableRow className="bg-gray-50">
+                            <TableCell className="pl-8 text-sm text-gray-600">
+                              <button 
+                                onClick={() => toggleStaffDetailBreakdown(staffId)}
+                                className="flex items-center gap-2 hover:text-blue-600"
+                              >
+                                {staffDetailBreakdowns[staffId] ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
+                                {data.name} ({data.totalSessionCount} sessions)
+                              </button>
+                            </TableCell>
+                            <TableCell className="text-right text-sm">{formatCurrency(data.totalCost)}</TableCell>
+                            <TableCell className="text-right text-sm">
+                              {calculations.totalClinicalCosts > 0 ? (data.totalCost / calculations.totalClinicalCosts * 100).toFixed(1) : 0}%
+                            </TableCell>
+                            <TableCell></TableCell>
+                          </TableRow>
+                          
+                          {/* Detailed Session Breakdown */}
+                          {staffDetailBreakdowns[staffId] && (
+                            <TableRow className="bg-blue-25">
+                              <TableCell colSpan={4} className="pl-12">
+                                <div className="space-y-1">
+                                  <div className="text-xs font-medium text-gray-700 mb-2">Session Details:</div>
+                                  {Object.entries(data.sessionTypeBreakdown).map(([sessionType, breakdown]) => (
+                                    <div key={sessionType} className="flex justify-between text-xs text-gray-600">
+                                      <span>{sessionType}: {breakdown.count} sessions @ {formatCurrency(breakdown.rate)} each</span>
+                                      <span>{formatCurrency(breakdown.cost)}</span>
+                                    </div>
+                                  ))}
+                                  <div className="border-t border-gray-200 pt-1 mt-2">
+                                    <div className="flex justify-between text-xs font-medium text-gray-700">
+                                      <span>Total: {data.totalSessionCount} sessions</span>
+                                      <span>{formatCurrency(data.totalCost)}</span>
+                                    </div>
+                                  </div>
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          )}
+                        </React.Fragment>
                       ))}
                     </CollapsibleContent>
                   </Collapsible>
