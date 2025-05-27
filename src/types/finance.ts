@@ -74,16 +74,15 @@ export type ClinicalStaffRates = {
   effectiveDate: string;
 };
 
-// Admin staff financial data
+// Admin staff financial data - updated to match our usage
 export type AdminStaffFinancials = {
   id: string;
-  staffId: string;
+  name: string;
+  role: string;
+  baseSalary: number;
+  commission: number;
   month: number;
   year: number;
-  baseSalary: number;
-  b2cRevenueAttributed: number;
-  commissionRate: number;
-  ftePercentage: number;
 };
 
 // Fixed overhead costs
