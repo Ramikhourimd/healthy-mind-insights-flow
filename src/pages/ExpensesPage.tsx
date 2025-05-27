@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useFinance } from "@/context/FinanceContext";
@@ -51,16 +50,25 @@ const ExpensesPage: React.FC = () => {
       session => session.month === currentPeriod.month && session.year === currentPeriod.year
     );
 
+    console.log(`Filtered data for ${currentPeriod.month}/${currentPeriod.year}:`);
+    console.log('- Clinical sessions:', filteredSessions.length);
+    console.log('- Admin staff:', filteredAdminStaff.length);
+    console.log('- Fixed overheads:', filteredOverheads.length);
+    console.log('- Available clinical staff rates:', clinicalStaffRates.length);
+
     return {
       filteredOverheads,
       filteredAdminStaff,
       filteredSessions
     };
-  }, [fixedOverheads, adminStaffFinancials, clinicalSessions, currentPeriod]);
+  }, [fixedOverheads, adminStaffFinancials, clinicalSessions, currentPeriod, clinicalStaffRates.length]);
 
   // Calculate clinical breakdown
   const calculations = useMemo(() => {
     const { filteredSessions } = filteredData;
+
+    console.log('Starting clinical calculations...');
+    console.log('Clinical staff rates available:', clinicalStaffRates);
 
     const clinicalBreakdown: { [staffId: string]: { 
       name: string; 
@@ -70,6 +78,8 @@ const ExpensesPage: React.FC = () => {
       sessionTypeBreakdown: { [key: string]: { count: number; cost: number; rate: number } };
     } } = {};
     
+    let totalCalculatedClinicalCosts = 0;
+
     filteredSessions.forEach(session => {
       if (!clinicalBreakdown[session.staffId]) {
         const staffMember = staffMembers.find(s => s.id === session.staffId);
@@ -85,9 +95,12 @@ const ExpensesPage: React.FC = () => {
       // Check both local state and try to find rates
       let staffRates = clinicalStaffRates.find(r => r.staffId === session.staffId);
       
-      console.log(`Looking for rates for staff ${session.staffId} (${clinicalBreakdown[session.staffId].name}):`, staffRates);
+      console.log(`Processing session for staff ${session.staffId} (${clinicalBreakdown[session.staffId].name}):`);
+      console.log('- Session:', session);
+      console.log('- Staff rates found:', staffRates);
       
       const sessionCost = getSessionCost(session, staffRates);
+      console.log('- Calculated session cost:', sessionCost);
       
       if (sessionCost === 0 && !staffRates) {
         console.warn(`No rates found for staff: ${clinicalBreakdown[session.staffId].name} (${session.staffId})`);
@@ -119,14 +132,20 @@ const ExpensesPage: React.FC = () => {
       });
       clinicalBreakdown[session.staffId].totalCost += sessionCost;
       clinicalBreakdown[session.staffId].totalSessionCount += (Number(session.count) || 0);
+      
+      totalCalculatedClinicalCosts += sessionCost;
     });
+    
+    console.log('Clinical breakdown calculated:', clinicalBreakdown);
+    console.log('Total calculated clinical costs:', totalCalculatedClinicalCosts);
+    console.log('Financial summary clinical costs:', financialSummary?.totalClinicalCosts);
     
     return {
       clinicalBreakdown,
-      totalClinicalCosts: financialSummary?.totalClinicalCosts || 0,
+      totalClinicalCosts: totalCalculatedClinicalCosts, // Use calculated value instead of financialSummary
       totalAdminCosts: financialSummary?.totalAdminCosts || 0,
       totalFixedOverheads: financialSummary?.totalFixedOverheads || 0,
-      totalExpenses: financialSummary?.totalExpenses || 0
+      totalExpenses: (totalCalculatedClinicalCosts + (financialSummary?.totalAdminCosts || 0) + (financialSummary?.totalFixedOverheads || 0))
     };
   }, [filteredData, staffMembers, clinicalStaffRates, financialSummary, toast]);
 
