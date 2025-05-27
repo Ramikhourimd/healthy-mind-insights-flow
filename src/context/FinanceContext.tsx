@@ -1259,7 +1259,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({
     }
   };
 
-  // Calculate financial summary
+  // Calculate financial summary with proper clinical staff costs
   const calculateFinancialSummary = () => {
     // Filter data for the current period
     const currentRevenueSources = revenueSources.filter(
@@ -1280,10 +1280,10 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({
         staff.year === currentPeriod.year
     );
 
-    const currentClinicalWork = clinicalStaffWork.filter(
-      (work) =>
-        work.month === currentPeriod.month &&
-        work.year === currentPeriod.year
+    const currentSessions = clinicalSessions.filter(
+      (session) =>
+        session.month === currentPeriod.month &&
+        session.year === currentPeriod.year
     );
 
     // Calculate total revenue
@@ -1304,18 +1304,40 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({
       0
     );
 
-    // Calculate total clinical costs from actual work data
+    // Calculate clinical staff costs from actual sessions
     let totalClinicalCosts = 0;
-    currentClinicalWork.forEach(work => {
-      // This is a simplified calculation - in reality you'd multiply by rates
-      // For now, we'll use the quarterly gross fees as an approximation
-      totalClinicalCosts += work.quarterlyGrossFees / 3; // Convert quarterly to monthly
+    
+    currentSessions.forEach(session => {
+      // Find the staff member's rates
+      const staffRates = clinicalStaffRates.find(r => r.staffId === session.staffId);
+      
+      if (staffRates) {
+        let sessionCost = 0;
+        
+        if (session.showStatus === "Show") {
+          // Calculate cost for sessions that were attended
+          if (session.meetingType === "Intake") {
+            sessionCost = staffRates.intakeSessionRate * session.count;
+          } else if (session.meetingType === "FollowUp") {
+            sessionCost = staffRates.followUpSessionRate * session.count;
+          }
+        } else if (session.showStatus === "NoShow") {
+          // Calculate cost for no-shows (typically lower rate)
+          if (session.meetingType === "Intake") {
+            sessionCost = staffRates.noShowIntakeRate * session.count;
+          } else if (session.meetingType === "FollowUp") {
+            sessionCost = staffRates.noShowFollowUpRate * session.count;
+          }
+        }
+        
+        totalClinicalCosts += sessionCost;
+      } else {
+        // If no rates found, use default estimation
+        const defaultRate = session.meetingType === "Intake" ? 600 : 450;
+        const noShowMultiplier = session.showStatus === "NoShow" ? 0.5 : 1;
+        totalClinicalCosts += defaultRate * session.count * noShowMultiplier;
+      }
     });
-
-    // If no clinical work data, use approximation
-    if (totalClinicalCosts === 0) {
-      totalClinicalCosts = totalRevenue * 0.5; // 50% of revenue as an estimate
-    }
     
     const totalExpenses = totalClinicalCosts + totalAdminCosts + totalFixedOverheads;
     
@@ -1329,10 +1351,11 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({
       operatingProfit: totalRevenue - totalExpenses,
       clinicalPayrollToRevenueRatio: totalRevenue > 0 ? totalClinicalCosts / totalRevenue : 0,
       totalPayrollToRevenueRatio: totalRevenue > 0 ? (totalClinicalCosts + totalAdminCosts) / totalRevenue : 0,
-      averageRevenuePerPatient: totalRevenue / 75, // Assuming 75 patients
-      averageCostPerClinicalUnit: totalClinicalCosts / 95, // Assuming 95 units
+      averageRevenuePerPatient: totalRevenue / Math.max(currentSessions.length, 1),
+      averageCostPerClinicalUnit: totalClinicalCosts / Math.max(currentSessions.reduce((sum, s) => sum + s.count, 0), 1),
     };
 
+    console.log("Financial summary calculated:", summary);
     return summary;
   };
 
