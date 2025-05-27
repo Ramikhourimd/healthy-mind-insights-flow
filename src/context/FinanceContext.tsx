@@ -1008,25 +1008,74 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }
   };
 
-  // Update settings
-  const updateSettings = async (newSettings: FinancialSettings): Promise<FinancialSettings> => {
-    try {
-      // This would save to database if we had a settings table
-      setSettings(newSettings);
-      return newSettings;
-    } catch (error) {
-      console.error('Failed to update settings:', error);
-      throw error;
-    }
+  // Calculate revenue from clinical sessions automatically
+  const calculateRevenueFromSessions = () => {
+    const filteredSessions = clinicalSessions.filter(
+      session => session.month === currentPeriod.month && session.year === currentPeriod.year
+    );
+
+    // Group sessions by clinic type to create revenue sources
+    const revenueByClinic: { [key: string]: number } = {};
+    
+    filteredSessions.forEach(session => {
+      const sessionCount = Number(session.count) || 0;
+      if (sessionCount > 0) {
+        // Calculate revenue per session based on clinic type and meeting type
+        let revenuePerSession = 0;
+        
+        // Standard rates for different clinic types and meeting types
+        if (session.clinicType === "PRV") {
+          revenuePerSession = session.meetingType === "Intake" ? 500 : 300; // Private clinic rates
+        } else if (session.clinicType === "MCB" || session.clinicType === "MHS") {
+          revenuePerSession = session.meetingType === "Intake" ? 350 : 200; // HMO rates
+        } else if (session.clinicType === "MHN" || session.clinicType === "MHY") {
+          revenuePerSession = session.meetingType === "Intake" ? 300 : 180; // Mental health network rates
+        } else if (session.clinicType === "MSY" || session.clinicType === "SPC") {
+          revenuePerSession = session.meetingType === "Intake" ? 400 : 250; // Specialized clinic rates
+        } else {
+          revenuePerSession = session.meetingType === "Intake" ? 350 : 200; // Default rates
+        }
+
+        // Only count revenue for "Show" sessions (not no-shows)
+        if (session.showStatus === "Show") {
+          const clinicName = `${session.clinicType} - ${session.meetingType}`;
+          if (!revenueByClinic[clinicName]) {
+            revenueByClinic[clinicName] = 0;
+          }
+          revenueByClinic[clinicName] += revenuePerSession * sessionCount;
+        }
+      }
+    });
+
+    // Convert to revenue source format
+    const autoCalculatedRevenue: RevenueSource[] = Object.entries(revenueByClinic).map(([name, total]) => ({
+      id: `auto-${name.replace(/\s+/g, '-').toLowerCase()}`,
+      name,
+      quantity: 1,
+      ratePerUnit: total,
+      month: currentPeriod.month,
+      year: currentPeriod.year,
+    }));
+
+    console.log('Auto-calculated revenue from sessions:', autoCalculatedRevenue);
+    return autoCalculatedRevenue;
   };
 
   // Update financial summary function
   const updateFinancialSummary = () => {
     console.log('Financial summary update triggered');
     
+    // Get manual revenue sources
     const filteredRevenue = revenueSources.filter(
       source => source.month === currentPeriod.month && source.year === currentPeriod.year
     );
+    
+    // Get auto-calculated revenue from sessions
+    const autoRevenue = calculateRevenueFromSessions();
+    
+    // Combine manual and auto revenue
+    const allRevenue = [...filteredRevenue, ...autoRevenue];
+    
     const filteredOverheads = fixedOverheads.filter(
       overhead => overhead.month === currentPeriod.month && overhead.year === currentPeriod.year
     );
@@ -1037,7 +1086,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
       session => session.month === currentPeriod.month && session.year === currentPeriod.year
     );
 
-    const totalRevenue = filteredRevenue.reduce((sum, source) => sum + (source.quantity * source.ratePerUnit), 0);
+    const totalRevenue = allRevenue.reduce((sum, source) => sum + (source.quantity * source.ratePerUnit), 0);
     const totalFixedOverheads = filteredOverheads.reduce((sum, overhead) => sum + overhead.monthlyCost, 0);
     const totalAdminCosts = filteredAdminStaff.reduce((sum, staff) => sum + staff.baseSalary + staff.commission, 0);
     
@@ -1090,6 +1139,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     });
     
     console.log('FinanceContext calculated clinical costs:', totalClinicalCosts);
+    console.log('FinanceContext calculated total revenue:', totalRevenue);
 
     const totalExpenses = totalClinicalCosts + totalAdminCosts + totalFixedOverheads;
     const operatingProfit = totalRevenue - totalExpenses;
