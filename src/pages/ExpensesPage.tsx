@@ -99,16 +99,10 @@ const ExpensesPage: React.FC = () => {
     staff => staff.month === currentPeriod.month && staff.year === currentPeriod.year
   );
 
-  // Update displayed sessions whenever the source data changes
-  useEffect(() => {
-    // Filter clinical sessions for current period
-    const filtered = clinicalSessions.filter(
-      session => session.month === currentPeriod.month && session.year === currentPeriod.year
-    );
-    
-    console.log("Updated filtered sessions:", filtered);
-    setDisplayedSessions(filtered);
-  }, [clinicalSessions, currentPeriod.month, currentPeriod.year]);
+  // Filter clinical sessions for current period
+  const filteredSessions = clinicalSessions.filter(
+    session => session.month === currentPeriod.month && session.year === currentPeriod.year
+  );
 
   // State for the overhead form
   const [isOverheadDialogOpen, setIsOverheadDialogOpen] = useState(false);
@@ -200,33 +194,37 @@ const ExpensesPage: React.FC = () => {
   };
 
   // Handle clinical session form submission
-  const handleSessionSubmit = (e: React.FormEvent) => {
+  const handleSessionSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (isSessionEditing && currentSession.id) {
-      updateClinicalSession({
-        id: currentSession.id,
-        staffId: currentSession.staffId,
-        clinicType: currentSession.clinicType,
-        meetingType: currentSession.meetingType,
-        showStatus: currentSession.showStatus,
-        count: currentSession.count,
-        duration: currentSession.duration,
-        month: currentPeriod.month,
-        year: currentPeriod.year,
-      });
-    } else {
-      addClinicalSession({
-        staffId: currentSession.staffId,
-        clinicType: currentSession.clinicType,
-        meetingType: currentSession.meetingType,
-        showStatus: currentSession.showStatus,
-        count: currentSession.count,
-        duration: currentSession.duration,
-        month: currentPeriod.month,
-        year: currentPeriod.year,
-      });
+    try {
+      if (isSessionEditing && currentSession.id) {
+        await updateClinicalSession({
+          id: currentSession.id,
+          staffId: currentSession.staffId,
+          clinicType: currentSession.clinicType,
+          meetingType: currentSession.meetingType,
+          showStatus: currentSession.showStatus,
+          count: currentSession.count,
+          duration: currentSession.duration,
+          month: currentPeriod.month,
+          year: currentPeriod.year,
+        });
+      } else {
+        await addClinicalSession({
+          staffId: currentSession.staffId,
+          clinicType: currentSession.clinicType,
+          meetingType: currentSession.meetingType,
+          showStatus: currentSession.showStatus,
+          count: currentSession.count,
+          duration: currentSession.duration,
+          month: currentPeriod.month,
+          year: currentPeriod.year,
+        });
+      }
+      handleCloseSessionDialog();
+    } catch (error) {
+      console.error("Error with session operation:", error);
     }
-    handleCloseSessionDialog();
   };
 
   // Handle admin staff form submission
@@ -288,9 +286,9 @@ const ExpensesPage: React.FC = () => {
   };
 
   // Delete a clinical session
-  const handleDeleteSession = (id: string) => {
+  const handleDeleteSession = async (id: string) => {
     if (confirm("Are you sure you want to delete this clinical session?")) {
-      deleteClinicalSession(id);
+      await deleteClinicalSession(id);
     }
   };
 
@@ -366,7 +364,7 @@ const ExpensesPage: React.FC = () => {
   };
 
   // Handle bulk import of clinical sessions with improved handling
-  const handleImportSessions = (sessions: Omit<ClinicalSession, "id">[]) => {
+  const handleImportSessions = async (sessions: Omit<ClinicalSession, "id">[]) => {
     console.log("ExpensesPage: Importing sessions:", sessions);
     
     if (sessions.length === 0) {
@@ -380,21 +378,13 @@ const ExpensesPage: React.FC = () => {
     
     try {
       // Add each session
-      sessions.forEach(session => {
+      for (const session of sessions) {
         console.log(`Adding session for staff ${getStaffNameById(session.staffId)}:`, session);
-        addClinicalSession(session);
-      });
+        await addClinicalSession(session);
+      }
       
-      // Force update financial summary after all sessions are imported
       console.log("Updating financial summary after import");
       updateFinancialSummary();
-      
-      // Get latest sessions filtered for current period and update display
-      const currentSessions = clinicalSessions.filter(
-        s => s.month === currentPeriod.month && s.year === currentPeriod.year
-      );
-      console.log("Updated sessions after import:", currentSessions);
-      setDisplayedSessions(currentSessions);
       
       toast({
         title: "Import Successful",
@@ -545,7 +535,7 @@ const ExpensesPage: React.FC = () => {
           <Card className="shadow-sm">
             <CardHeader>
               <CardTitle className="text-lg font-medium">
-                Clinical Staff Sessions ({displayedSessions.length} sessions)
+                Clinical Staff Sessions ({filteredSessions.length} sessions)
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -562,8 +552,8 @@ const ExpensesPage: React.FC = () => {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {displayedSessions.length > 0 ? (
-                    displayedSessions.map((session) => (
+                  {filteredSessions.length > 0 ? (
+                    filteredSessions.map((session) => (
                       <TableRow key={session.id}>
                         <TableCell>{getStaffNameById(session.staffId)}</TableCell>
                         <TableCell>{session.clinicType}</TableCell>
@@ -615,7 +605,7 @@ const ExpensesPage: React.FC = () => {
                       {staffMembers
                         .filter(staff => staff.role === "Psychiatrist" || staff.role === "CaseManager")
                         .map(staff => {
-                          const staffSessions = displayedSessions.filter(s => s.staffId === staff.id);
+                          const staffSessions = filteredSessions.filter(s => s.staffId === staff.id);
                           const intakes = staffSessions.filter(s => s.meetingType === "Intake").reduce((sum, s) => sum + s.count, 0);
                           const followUps = staffSessions.filter(s => s.meetingType === "FollowUp").reduce((sum, s) => sum + s.count, 0);
                           const noShows = staffSessions.filter(s => s.showStatus === "NoShow").reduce((sum, s) => sum + s.count, 0);

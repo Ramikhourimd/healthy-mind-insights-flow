@@ -93,6 +93,56 @@ export type Database = {
         }
         Relationships: []
       }
+      clinical_sessions: {
+        Row: {
+          clinic_type: string
+          count: number
+          created_at: string
+          duration: number
+          id: string
+          meeting_type: string
+          month: number
+          show_status: string
+          staff_id: string
+          updated_at: string
+          year: number
+        }
+        Insert: {
+          clinic_type: string
+          count?: number
+          created_at?: string
+          duration?: number
+          id?: string
+          meeting_type: string
+          month: number
+          show_status: string
+          staff_id: string
+          updated_at?: string
+          year: number
+        }
+        Update: {
+          clinic_type?: string
+          count?: number
+          created_at?: string
+          duration?: number
+          id?: string
+          meeting_type?: string
+          month?: number
+          show_status?: string
+          staff_id?: string
+          updated_at?: string
+          year?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "clinical_sessions_staff_id_fkey"
+            columns: ["staff_id"]
+            isOneToOne: false
+            referencedRelation: "staff_members"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       clinical_staff_rates: {
         Row: {
           admin_rate: number

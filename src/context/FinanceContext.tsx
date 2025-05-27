@@ -66,9 +66,9 @@ type FinanceContextType = {
   addFixedOverhead: (overhead: Omit<FixedOverhead, "id">) => Promise<void>;
   updateFixedOverhead: (overhead: FixedOverhead) => Promise<void>;
   deleteFixedOverhead: (id: string) => Promise<void>;
-  addClinicalSession: (sessionData: Omit<ClinicalSession, "id">) => string;
-  updateClinicalSession: (session: ClinicalSession) => void;
-  deleteClinicalSession: (id: string) => void;
+  addClinicalSession: (sessionData: Omit<ClinicalSession, "id">) => Promise<string>;
+  updateClinicalSession: (session: ClinicalSession) => Promise<void>;
+  deleteClinicalSession: (id: string) => Promise<void>;
   addClinicalStaffWork: (work: Omit<ClinicalStaffWork, "id">) => Promise<void>;
   updateClinicalStaffWork: (work: ClinicalStaffWork) => Promise<void>;
   deleteClinicalStaffWork: (id: string) => Promise<void>;
@@ -146,6 +146,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({
         loadFixedOverheads(),
         loadAdminStaffFinancials(),
         loadFinancialSettings(),
+        loadClinicalSessions(),
       ]);
       
       // Calculate the financial summary after loading all data
@@ -160,6 +161,38 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({
       });
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  // Load clinical sessions from Supabase
+  const loadClinicalSessions = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("clinical_sessions")
+        .select("*")
+        .eq("month", currentPeriod.month)
+        .eq("year", currentPeriod.year)
+        .order("created_at");
+
+      if (error) throw error;
+
+      if (data) {
+        const mappedSessions: ClinicalSession[] = data.map(item => ({
+          id: item.id,
+          staffId: item.staff_id,
+          clinicType: item.clinic_type as ClinicType,
+          meetingType: item.meeting_type as MeetingType,
+          showStatus: item.show_status as ShowStatus,
+          count: item.count,
+          duration: item.duration,
+          month: item.month,
+          year: item.year,
+        }));
+        setClinicalSessions(mappedSessions);
+        console.log("Loaded clinical sessions:", mappedSessions);
+      }
+    } catch (error) {
+      console.error("Error loading clinical sessions:", error);
     }
   };
 
@@ -1108,35 +1141,122 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({
   };
 
   // For clinical sessions, we're still using local state
-  const addClinicalSession = (sessionData: Omit<ClinicalSession, "id">) => {
-    console.log("addClinicalSession called with:", sessionData);
-    const id = uuidv4();
-    const newSession = { ...sessionData, id };
-    
-    setClinicalSessions(prev => {
-      const updated = [...prev, newSession];
-      console.log("Updated clinical sessions:", updated);
-      return updated;
-    });
-    
-    // Update summary after adding a session
-    setTimeout(() => {
-      const summary = calculateFinancialSummary();
-      setFinancialSummary(summary);
-      console.log("Financial summary updated after adding session:", summary);
-    }, 50);
-    
-    return id;
+  const addClinicalSession = async (sessionData: Omit<ClinicalSession, "id">) => {
+    try {
+      console.log("Adding clinical session:", sessionData);
+      
+      const { data, error } = await supabase
+        .from("clinical_sessions")
+        .insert({
+          staff_id: sessionData.staffId,
+          clinic_type: sessionData.clinicType,
+          meeting_type: sessionData.meetingType,
+          show_status: sessionData.showStatus,
+          count: sessionData.count,
+          duration: sessionData.duration,
+          month: sessionData.month,
+          year: sessionData.year
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      if (data) {
+        const newSession: ClinicalSession = {
+          id: data.id,
+          staffId: data.staff_id,
+          clinicType: data.clinic_type as ClinicType,
+          meetingType: data.meeting_type as MeetingType,
+          showStatus: data.show_status as ShowStatus,
+          count: data.count,
+          duration: data.duration,
+          month: data.month,
+          year: data.year,
+        };
+        
+        setClinicalSessions(prev => [...prev, newSession]);
+        
+        // Update financial summary
+        setTimeout(() => {
+          const summary = calculateFinancialSummary();
+          setFinancialSummary(summary);
+        }, 50);
+        
+        console.log("Clinical session added successfully:", newSession);
+        return data.id;
+      }
+    } catch (error) {
+      console.error("Error adding clinical session:", error);
+      toast({
+        title: "Error",
+        description: "Failed to add clinical session",
+        variant: "destructive",
+      });
+      throw error;
+    }
+    return "";
   };
 
-  const updateClinicalSession = (session: ClinicalSession) => {
-    setClinicalSessions(
-      clinicalSessions.map((s) => (s.id === session.id ? session : s))
-    );
+  const updateClinicalSession = async (session: ClinicalSession) => {
+    try {
+      const { error } = await supabase
+        .from("clinical_sessions")
+        .update({
+          staff_id: session.staffId,
+          clinic_type: session.clinicType,
+          meeting_type: session.meetingType,
+          show_status: session.showStatus,
+          count: session.count,
+          duration: session.duration,
+          month: session.month,
+          year: session.year,
+          updated_at: new Date().toISOString()
+        })
+        .eq("id", session.id);
+
+      if (error) throw error;
+
+      setClinicalSessions(prev => prev.map(s => s.id === session.id ? session : s));
+      
+      toast({
+        title: "Session Updated",
+        description: "Clinical session has been updated.",
+      });
+    } catch (error) {
+      console.error("Error updating clinical session:", error);
+      toast({
+        title: "Error",
+        description: "Failed to update clinical session",
+        variant: "destructive",
+      });
+    }
   };
 
-  const deleteClinicalSession = (id: string) => {
-    setClinicalSessions(clinicalSessions.filter((s) => s.id !== id));
+  const deleteClinicalSession = async (id: string) => {
+    try {
+      const { error } = await supabase
+        .from("clinical_sessions")
+        .delete()
+        .eq("id", id);
+
+      if (error) throw error;
+
+      setClinicalSessions(prev => prev.filter(s => s.id !== id));
+      
+      toast({
+        title: "Session Deleted",
+        description: "Clinical session has been removed.",
+        variant: "destructive"
+      });
+    } catch (error) {
+      console.error("Error deleting clinical session:", error);
+      toast({
+        title: "Error",
+        description: "Failed to delete clinical session",
+        variant: "destructive",
+      });
+    }
   };
 
   // Calculate financial summary
