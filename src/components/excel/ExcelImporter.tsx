@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,7 +8,8 @@ import {
   TimePeriod,
   ClinicType,
   MeetingType,
-  ShowStatus
+  ShowStatus,
+  ServiceType
 } from '@/types/finance';
 import { 
   Card, 
@@ -329,11 +329,15 @@ const ExcelImporter: React.FC<ExcelImporterProps> = ({
       const count = Number(row.count) || 1;
       const duration = Number(row.duration) || 60;
 
+      // Determine service age group - default to Adult
+      const serviceAgeGroup: ServiceType = row.serviceAgeGroup || "Adult";
+
       return {
         staffId: staffMember.id,
         clinicType: clinicType as ClinicType,
         meetingType: meetingType as MeetingType,
         showStatus: showStatus as ShowStatus,
+        serviceAgeGroup,
         count: count, // Ensure it's a number
         duration: duration, // Ensure it's a number
         month: currentPeriod.month,
@@ -484,6 +488,7 @@ const ExcelImporter: React.FC<ExcelImporterProps> = ({
                 <li><strong>סוג מרפאה (Clinic Type)</strong> - מחולץ מהכותרת, לדוגמה: HM-MHS-530 → MHS</li>
                 <li><strong>סוג מפגש (Meeting Type)</strong> - נקבע כ-Intake אם "סוג מפגש" כולל "אינטייק" או "הערכה ראשונית", אחרת FollowUp</li>
                 <li><strong>מצב הגעה (Show Status)</strong> - נקבע כ-NoShow אם "סטטוס" מכיל "המשתתף לא הופיע", אחרת Show</li>
+                <li><strong>קבוצת גיל (Service Age Group)</strong> - נקבע כ-Adult כברירת מחדל, אלא אם כן מצוין אחרת</li>
                 <li><strong>משך</strong> - נלקח מעמודת "משך (דק׳)" או מחושב מזמני התחלה וסיום</li>
               </ul>
             </div>
@@ -491,10 +496,10 @@ const ExcelImporter: React.FC<ExcelImporterProps> = ({
             <Alert className="mt-4">
               <AlertTitle className="flex items-center gap-2">
                 <CheckCircle2 className="h-4 w-4" />
-                NEW: Manual Staff Mapping
+                NEW: Service Age Group Support
               </AlertTitle>
               <AlertDescription>
-                <p>If automatic staff name matching fails, you can now manually map Excel staff names to your system staff.</p>
+                <p>Sessions now include age group classification (Adult/Child) for more accurate rate calculations.</p>
               </AlertDescription>
             </Alert>
             

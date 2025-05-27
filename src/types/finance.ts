@@ -42,7 +42,7 @@ export type ClinicalSession = {
   clinicType: ClinicType;
   meetingType: MeetingType;
   showStatus: ShowStatus;
-  serviceType?: ServiceType; // New field for adult/child distinction
+  serviceAgeGroup: ServiceType; // Updated to use serviceAgeGroup instead of serviceType
   count: number;
   duration: number; // in minutes
   month: number;

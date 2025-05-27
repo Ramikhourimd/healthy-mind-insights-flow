@@ -102,6 +102,7 @@ export type Database = {
           id: string
           meeting_type: string
           month: number
+          service_age_group: string
           show_status: string
           staff_id: string
           updated_at: string
@@ -115,6 +116,7 @@ export type Database = {
           id?: string
           meeting_type: string
           month: number
+          service_age_group?: string
           show_status: string
           staff_id: string
           updated_at?: string
@@ -128,6 +130,7 @@ export type Database = {
           id?: string
           meeting_type?: string
           month?: number
+          service_age_group?: string
           show_status?: string
           staff_id?: string
           updated_at?: string
