@@ -525,6 +525,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({
         .from("clinical_staff_rates")
         .insert({
           staff_id: rates.staffId,
+          // New adult/child specific columns
           adult_intake_rate: rates.adult_intake_rate,
           adult_follow_up_rate: rates.adult_follow_up_rate,
           adult_no_show_intake_rate: rates.adult_no_show_intake_rate,
@@ -533,6 +534,12 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({
           child_follow_up_rate: rates.child_follow_up_rate,
           child_no_show_intake_rate: rates.child_no_show_intake_rate,
           child_no_show_follow_up_rate: rates.child_no_show_follow_up_rate,
+          // Legacy columns (still required by database schema)
+          intake_session_rate: rates.adult_intake_rate, // Use adult rate as default
+          follow_up_session_rate: rates.adult_follow_up_rate, // Use adult rate as default
+          no_show_intake_rate: rates.adult_no_show_intake_rate, // Use adult rate as default
+          no_show_follow_up_rate: rates.adult_no_show_follow_up_rate, // Use adult rate as default
+          // Other columns
           availability_retainer_rate: rates.availability_retainer_rate,
           admin_rate: rates.admin_rate,
           training_rate: rates.training_rate,
@@ -585,6 +592,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({
         .from("clinical_staff_rates")
         .update({
           staff_id: rates.staffId,
+          // New adult/child specific columns
           adult_intake_rate: rates.adult_intake_rate,
           adult_follow_up_rate: rates.adult_follow_up_rate,
           adult_no_show_intake_rate: rates.adult_no_show_intake_rate,
@@ -593,6 +601,12 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({
           child_follow_up_rate: rates.child_follow_up_rate,
           child_no_show_intake_rate: rates.child_no_show_intake_rate,
           child_no_show_follow_up_rate: rates.child_no_show_follow_up_rate,
+          // Legacy columns (still required by database schema)
+          intake_session_rate: rates.adult_intake_rate, // Use adult rate as default
+          follow_up_session_rate: rates.adult_follow_up_rate, // Use adult rate as default
+          no_show_intake_rate: rates.adult_no_show_intake_rate, // Use adult rate as default
+          no_show_follow_up_rate: rates.adult_no_show_follow_up_rate, // Use adult rate as default
+          // Other columns
           availability_retainer_rate: rates.availability_retainer_rate,
           admin_rate: rates.admin_rate,
           training_rate: rates.training_rate,
