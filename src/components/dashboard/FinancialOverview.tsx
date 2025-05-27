@@ -29,6 +29,33 @@ export const FinancialOverview: React.FC = () => {
     return "text-clinic-red";
   };
 
+  // Safety check for null/undefined values
+  if (!financialSummary || !settings) {
+    return (
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+        {Array.from({ length: 4 }).map((_, index) => (
+          <Card key={index} className="shadow-sm">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground">
+                Loading...
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-center justify-between">
+                <div className="text-2xl font-bold">
+                  {formatCurrency(0)}
+                </div>
+                <div className="p-2 bg-gray-100 rounded-full">
+                  <DollarSign className="h-5 w-5 text-gray-500" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+    );
+  }
+
   const clinicalPayrollColor = getPayrollRatioColor(
     financialSummary.clinicalPayrollToRevenueRatio,
     settings.targetClinicalPayrollToRevenueRatio

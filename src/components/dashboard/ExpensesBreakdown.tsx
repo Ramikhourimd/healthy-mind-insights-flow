@@ -7,6 +7,22 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContaine
 export const ExpensesBreakdown: React.FC = () => {
   const { financialSummary } = useFinance();
   
+  // Safety check for null/undefined financialSummary
+  if (!financialSummary) {
+    return (
+      <Card className="shadow-sm">
+        <CardHeader>
+          <CardTitle className="text-lg font-medium">Expenses Breakdown</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="h-64 flex items-center justify-center">
+            <p className="text-muted-foreground">Loading expenses data...</p>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
   // Prepare data for the chart with improved colors and display
   const chartData = [
     {
