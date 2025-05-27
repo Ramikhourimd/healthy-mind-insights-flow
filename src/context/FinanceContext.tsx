@@ -525,7 +525,6 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({
         .from("clinical_staff_rates")
         .insert({
           staff_id: rates.staffId,
-          // New adult/child specific columns
           adult_intake_rate: rates.adult_intake_rate,
           adult_follow_up_rate: rates.adult_follow_up_rate,
           adult_no_show_intake_rate: rates.adult_no_show_intake_rate,
@@ -534,17 +533,16 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({
           child_follow_up_rate: rates.child_follow_up_rate,
           child_no_show_intake_rate: rates.child_no_show_intake_rate,
           child_no_show_follow_up_rate: rates.child_no_show_follow_up_rate,
-          // Legacy columns (still required by database schema)
-          intake_session_rate: rates.adult_intake_rate, // Use adult rate as default
-          follow_up_session_rate: rates.adult_follow_up_rate, // Use adult rate as default
-          no_show_intake_rate: rates.adult_no_show_intake_rate, // Use adult rate as default
-          no_show_follow_up_rate: rates.adult_no_show_follow_up_rate, // Use adult rate as default
-          // Other columns
           availability_retainer_rate: rates.availability_retainer_rate,
           admin_rate: rates.admin_rate,
           training_rate: rates.training_rate,
           contract_type_identifier: rates.contract_type_identifier,
-          effective_date: rates.effective_date || new Date().toISOString()
+          effective_date: rates.effective_date || new Date().toISOString(),
+          // Legacy columns for backward compatibility
+          intake_session_rate: rates.adult_intake_rate,
+          follow_up_session_rate: rates.adult_follow_up_rate,
+          no_show_intake_rate: rates.adult_no_show_intake_rate,
+          no_show_follow_up_rate: rates.adult_no_show_follow_up_rate,
         })
         .select();
 
@@ -592,7 +590,6 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({
         .from("clinical_staff_rates")
         .update({
           staff_id: rates.staffId,
-          // New adult/child specific columns
           adult_intake_rate: rates.adult_intake_rate,
           adult_follow_up_rate: rates.adult_follow_up_rate,
           adult_no_show_intake_rate: rates.adult_no_show_intake_rate,
@@ -601,17 +598,16 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({
           child_follow_up_rate: rates.child_follow_up_rate,
           child_no_show_intake_rate: rates.child_no_show_intake_rate,
           child_no_show_follow_up_rate: rates.child_no_show_follow_up_rate,
-          // Legacy columns (still required by database schema)
-          intake_session_rate: rates.adult_intake_rate, // Use adult rate as default
-          follow_up_session_rate: rates.adult_follow_up_rate, // Use adult rate as default
-          no_show_intake_rate: rates.adult_no_show_intake_rate, // Use adult rate as default
-          no_show_follow_up_rate: rates.adult_no_show_follow_up_rate, // Use adult rate as default
-          // Other columns
           availability_retainer_rate: rates.availability_retainer_rate,
           admin_rate: rates.admin_rate,
           training_rate: rates.training_rate,
           contract_type_identifier: rates.contract_type_identifier,
-          updated_at: new Date().toISOString()
+          updated_at: new Date().toISOString(),
+          // Legacy columns for backward compatibility
+          intake_session_rate: rates.adult_intake_rate,
+          follow_up_session_rate: rates.adult_follow_up_rate,
+          no_show_intake_rate: rates.adult_no_show_intake_rate,
+          no_show_follow_up_rate: rates.adult_no_show_follow_up_rate,
         })
         .eq("id", rates.id);
 
@@ -653,17 +649,17 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({
         return {
           id: data[0].id,
           staffId: data[0].staff_id,
-          adult_intake_rate: Number(data[0].adult_intake_rate || data[0].intake_session_rate || 600),
-          adult_follow_up_rate: Number(data[0].adult_follow_up_rate || data[0].follow_up_session_rate || 450),
-          adult_no_show_intake_rate: Number(data[0].adult_no_show_intake_rate || data[0].no_show_intake_rate || 300),
-          adult_no_show_follow_up_rate: Number(data[0].adult_no_show_follow_up_rate || data[0].no_show_follow_up_rate || 200),
-          child_intake_rate: Number(data[0].child_intake_rate || data[0].intake_session_rate || 600),
-          child_follow_up_rate: Number(data[0].child_follow_up_rate || data[0].follow_up_session_rate || 450),
-          child_no_show_intake_rate: Number(data[0].child_no_show_intake_rate || data[0].no_show_intake_rate || 300),
-          child_no_show_follow_up_rate: Number(data[0].child_no_show_follow_up_rate || data[0].no_show_follow_up_rate || 200),
-          availability_retainer_rate: Number(data[0].availability_retainer_rate),
-          admin_rate: Number(data[0].admin_rate),
-          training_rate: Number(data[0].training_rate),
+          adult_intake_rate: Number(data[0].adult_intake_rate || 600),
+          adult_follow_up_rate: Number(data[0].adult_follow_up_rate || 450),
+          adult_no_show_intake_rate: Number(data[0].adult_no_show_intake_rate || 300),
+          adult_no_show_follow_up_rate: Number(data[0].adult_no_show_follow_up_rate || 225),
+          child_intake_rate: Number(data[0].child_intake_rate || 600),
+          child_follow_up_rate: Number(data[0].child_follow_up_rate || 450),
+          child_no_show_intake_rate: Number(data[0].child_no_show_intake_rate || 300),
+          child_no_show_follow_up_rate: Number(data[0].child_no_show_follow_up_rate || 225),
+          availability_retainer_rate: Number(data[0].availability_retainer_rate || 150),
+          admin_rate: Number(data[0].admin_rate || 250),
+          training_rate: Number(data[0].training_rate || 250),
           effective_date: data[0].effective_date,
           contract_type_identifier: data[0].contract_type_identifier,
         };
@@ -676,11 +672,11 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({
         adult_intake_rate: 600,
         adult_follow_up_rate: 450,
         adult_no_show_intake_rate: 300,
-        adult_no_show_follow_up_rate: 200,
+        adult_no_show_follow_up_rate: 225,
         child_intake_rate: 600,
         child_follow_up_rate: 450,
         child_no_show_intake_rate: 300,
-        child_no_show_follow_up_rate: 200,
+        child_no_show_follow_up_rate: 225,
         availability_retainer_rate: 150,
         admin_rate: 250,
         training_rate: 250,
