@@ -3,7 +3,7 @@ import React, { useState, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useFinance } from "@/context/FinanceContext";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useToast } from "@/components/ui/use-toast";
+import { useToast } from "@/hooks/use-toast";
 import { getSessionCost } from "@/utils/getSessionCost";
 import { ExpenseSummaryCard } from "@/components/expenses/ExpenseSummaryCard";
 import { FixedOverheadsTab } from "@/components/expenses/FixedOverheadsTab";
@@ -27,7 +27,8 @@ const ExpensesPage: React.FC = () => {
     adminStaffFinancials,
     addAdminStaff,
     updateAdminStaff,
-    deleteAdminStaff
+    deleteAdminStaff,
+    getStaffRates
   } = useFinance();
   
   // State for collapsible sections
@@ -81,10 +82,15 @@ const ExpensesPage: React.FC = () => {
         };
       }
       
-      const staffRates = clinicalStaffRates.find(r => r.staffId === session.staffId);
+      // Check both local state and try to find rates
+      let staffRates = clinicalStaffRates.find(r => r.staffId === session.staffId);
+      
+      console.log(`Looking for rates for staff ${session.staffId} (${clinicalBreakdown[session.staffId].name}):`, staffRates);
+      
       const sessionCost = getSessionCost(session, staffRates);
       
       if (sessionCost === 0 && !staffRates) {
+        console.warn(`No rates found for staff: ${clinicalBreakdown[session.staffId].name} (${session.staffId})`);
         toast({
           title: "Missing Staff Rates",
           description: `No payment rates found for ${clinicalBreakdown[session.staffId].name}. Please add rates in Staff Management.`,

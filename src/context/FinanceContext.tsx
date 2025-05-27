@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { 
@@ -150,6 +149,43 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
       return transformedSessions;
     } catch (error) {
       console.error('Failed to fetch clinical sessions:', error);
+      return [];
+    }
+  };
+
+  // Fetch clinical staff rates
+  const fetchClinicalStaffRates = async (): Promise<ClinicalStaffRates[]> => {
+    try {
+      const { data, error } = await supabase
+        .from('clinical_staff_rates')
+        .select('*')
+        .order('effective_date', { ascending: false });
+
+      if (error) throw error;
+
+      const transformedRates: ClinicalStaffRates[] = data.map((row) => ({
+        id: row.id,
+        staffId: row.staff_id,
+        adult_intake_rate: row.adult_intake_rate,
+        adult_follow_up_rate: row.adult_follow_up_rate,
+        adult_no_show_intake_rate: row.adult_no_show_intake_rate,
+        adult_no_show_follow_up_rate: row.adult_no_show_follow_up_rate,
+        child_intake_rate: row.child_intake_rate,
+        child_follow_up_rate: row.child_follow_up_rate,
+        child_no_show_intake_rate: row.child_no_show_intake_rate,
+        child_no_show_follow_up_rate: row.child_no_show_follow_up_rate,
+        availability_retainer_rate: row.availability_retainer_rate,
+        admin_rate: row.admin_rate,
+        training_rate: row.training_rate,
+        contract_type_identifier: row.contract_type_identifier,
+        effective_date: row.effective_date
+      }));
+
+      console.log('Fetched clinical staff rates:', transformedRates);
+      setClinicalStaffRates(transformedRates);
+      return transformedRates;
+    } catch (error) {
+      console.error('Failed to fetch clinical staff rates:', error);
       return [];
     }
   };
@@ -593,6 +629,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
       };
 
       setClinicalStaffRates(prev => [...prev, newRates]);
+      console.log('Added new staff rates:', newRates);
       return newRates;
     } catch (error) {
       console.error('Failed to add staff rates:', error);
@@ -647,6 +684,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
       setClinicalStaffRates(prev => prev.map(rates => 
         rates.id === ratesData.id ? updatedRates : rates
       ));
+      console.log('Updated staff rates:', updatedRates);
       return updatedRates;
     } catch (error) {
       console.error('Failed to update staff rates:', error);
@@ -656,6 +694,16 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   const getStaffRates = async (staffId: string): Promise<ClinicalStaffRates | null> => {
     try {
+      console.log('Getting staff rates for:', staffId);
+      
+      // First check local state
+      const localRates = clinicalStaffRates.find(rates => rates.staffId === staffId);
+      if (localRates) {
+        console.log('Found rates in local state:', localRates);
+        return localRates;
+      }
+
+      // If not found locally, fetch from database
       const { data, error } = await supabase
         .from('clinical_staff_rates')
         .select('*')
@@ -667,12 +715,13 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
       if (error) {
         if (error.code === 'PGRST116') {
           // No rows found
+          console.log('No rates found for staff:', staffId);
           return null;
         }
         throw error;
       }
 
-      return {
+      const rates = {
         id: data.id,
         staffId: data.staff_id,
         adult_intake_rate: data.adult_intake_rate,
@@ -689,6 +738,9 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
         contract_type_identifier: data.contract_type_identifier,
         effective_date: data.effective_date
       };
+
+      console.log('Fetched rates from database:', rates);
+      return rates;
     } catch (error) {
       console.error('Failed to get staff rates:', error);
       return null;
@@ -1010,6 +1062,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     fetchClinicalSessions();
     fetchRevenueSources();
     fetchStaffMembers();
+    fetchClinicalStaffRates(); // Add this to fetch rates on mount
     fetchFixedOverheads();
     fetchAdminStaffFinancials();
   }, []);
