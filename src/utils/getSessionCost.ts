@@ -23,19 +23,36 @@ export const getSessionCost = (
   }
 
   let rate = 0;
+  const serviceType = session.serviceType || "Adult"; // Default to Adult if not specified
 
-  // Select the appropriate rate based on meeting type and show status
+  // Select the appropriate rate based on service type, meeting type and show status
   if (session.showStatus === "Show") {
     if (session.meetingType === "Intake") {
-      rate = Number(staffRates.intakeSessionRate) || 0;
+      if (serviceType === "Adult") {
+        rate = Number(staffRates.adultIntakeRate || staffRates.intakeSessionRate) || 0;
+      } else {
+        rate = Number(staffRates.childIntakeRate || staffRates.intakeSessionRate) || 0;
+      }
     } else if (session.meetingType === "FollowUp") {
-      rate = Number(staffRates.followUpSessionRate) || 0;
+      if (serviceType === "Adult") {
+        rate = Number(staffRates.adultFollowUpRate || staffRates.followUpSessionRate) || 0;
+      } else {
+        rate = Number(staffRates.childFollowUpRate || staffRates.followUpSessionRate) || 0;
+      }
     }
   } else if (session.showStatus === "NoShow") {
     if (session.meetingType === "Intake") {
-      rate = Number(staffRates.noShowIntakeRate) || 0;
+      if (serviceType === "Adult") {
+        rate = Number(staffRates.adultNoShowIntakeRate || staffRates.noShowIntakeRate) || 0;
+      } else {
+        rate = Number(staffRates.childNoShowIntakeRate || staffRates.noShowIntakeRate) || 0;
+      }
     } else if (session.meetingType === "FollowUp") {
-      rate = Number(staffRates.noShowFollowUpRate) || 0;
+      if (serviceType === "Adult") {
+        rate = Number(staffRates.adultNoShowFollowUpRate || staffRates.noShowFollowUpRate) || 0;
+      } else {
+        rate = Number(staffRates.childNoShowFollowUpRate || staffRates.noShowFollowUpRate) || 0;
+      }
     }
   }
 

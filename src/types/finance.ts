@@ -1,4 +1,3 @@
-
 // Types for the HealthyMind Clinic Financial Dashboard
 
 // Revenue Source types
@@ -32,6 +31,9 @@ export type MeetingType = "Intake" | "FollowUp";
 // Show status
 export type ShowStatus = "Show" | "NoShow";
 
+// Service type for different age groups
+export type ServiceType = "Adult" | "Child";
+
 // Clinical staff session tracking
 export type ClinicalSession = {
   id: string;
@@ -39,6 +41,7 @@ export type ClinicalSession = {
   clinicType: ClinicType;
   meetingType: MeetingType;
   showStatus: ShowStatus;
+  serviceType?: ServiceType; // New field for adult/child distinction
   count: number;
   duration: number; // in minutes
   month: number;
@@ -60,17 +63,30 @@ export type ClinicalStaffWork = {
   quarterlyGrossFees: number; // For bonus calculation
 };
 
-// Rates for clinical staff
+// Rates for clinical staff - updated with adult/child rates
 export type ClinicalStaffRates = {
   id: string;
   staffId: string;
+  // Legacy rates (kept for backward compatibility)
   intakeSessionRate: number;
   followUpSessionRate: number;
   noShowIntakeRate: number;
   noShowFollowUpRate: number;
+  // New adult rates
+  adultIntakeRate?: number;
+  adultFollowUpRate?: number;
+  adultNoShowIntakeRate?: number;
+  adultNoShowFollowUpRate?: number;
+  // New child rates
+  childIntakeRate?: number;
+  childFollowUpRate?: number;
+  childNoShowIntakeRate?: number;
+  childNoShowFollowUpRate?: number;
+  // Other rates
   availabilityRetainerRate: number;
   adminRate: number;
   trainingRate: number;
+  contractTypeIdentifier?: string;
   effectiveDate: string;
 };
 

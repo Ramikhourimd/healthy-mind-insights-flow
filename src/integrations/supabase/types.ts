@@ -146,7 +146,16 @@ export type Database = {
       clinical_staff_rates: {
         Row: {
           admin_rate: number
+          adult_follow_up_rate: number | null
+          adult_intake_rate: number | null
+          adult_no_show_follow_up_rate: number | null
+          adult_no_show_intake_rate: number | null
           availability_retainer_rate: number
+          child_follow_up_rate: number | null
+          child_intake_rate: number | null
+          child_no_show_follow_up_rate: number | null
+          child_no_show_intake_rate: number | null
+          contract_type_identifier: string | null
           created_at: string
           effective_date: string
           follow_up_session_rate: number
@@ -160,7 +169,16 @@ export type Database = {
         }
         Insert: {
           admin_rate: number
+          adult_follow_up_rate?: number | null
+          adult_intake_rate?: number | null
+          adult_no_show_follow_up_rate?: number | null
+          adult_no_show_intake_rate?: number | null
           availability_retainer_rate: number
+          child_follow_up_rate?: number | null
+          child_intake_rate?: number | null
+          child_no_show_follow_up_rate?: number | null
+          child_no_show_intake_rate?: number | null
+          contract_type_identifier?: string | null
           created_at?: string
           effective_date?: string
           follow_up_session_rate: number
@@ -174,7 +192,16 @@ export type Database = {
         }
         Update: {
           admin_rate?: number
+          adult_follow_up_rate?: number | null
+          adult_intake_rate?: number | null
+          adult_no_show_follow_up_rate?: number | null
+          adult_no_show_intake_rate?: number | null
           availability_retainer_rate?: number
+          child_follow_up_rate?: number | null
+          child_intake_rate?: number | null
+          child_no_show_follow_up_rate?: number | null
+          child_no_show_intake_rate?: number | null
+          contract_type_identifier?: string | null
           created_at?: string
           effective_date?: string
           follow_up_session_rate?: number

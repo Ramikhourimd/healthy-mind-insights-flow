@@ -73,9 +73,18 @@ const StaffPage: React.FC = () => {
     followUpSessionRate: 0,
     noShowIntakeRate: 0,
     noShowFollowUpRate: 0,
+    adultIntakeRate: 0,
+    adultFollowUpRate: 0,
+    adultNoShowIntakeRate: 0,
+    adultNoShowFollowUpRate: 0,
+    childIntakeRate: 0,
+    childFollowUpRate: 0,
+    childNoShowIntakeRate: 0,
+    childNoShowFollowUpRate: 0,
     availabilityRetainerRate: 0,
     adminRate: 0,
     trainingRate: 0,
+    contractTypeIdentifier: "",
     effectiveDate: new Date().toISOString(),
   });
 
@@ -155,9 +164,18 @@ const StaffPage: React.FC = () => {
           followUpSessionRate: currentRates.followUpSessionRate,
           noShowIntakeRate: currentRates.noShowIntakeRate,
           noShowFollowUpRate: currentRates.noShowFollowUpRate,
+          adultIntakeRate: currentRates.adultIntakeRate,
+          adultFollowUpRate: currentRates.adultFollowUpRate,
+          adultNoShowIntakeRate: currentRates.adultNoShowIntakeRate,
+          adultNoShowFollowUpRate: currentRates.adultNoShowFollowUpRate,
+          childIntakeRate: currentRates.childIntakeRate,
+          childFollowUpRate: currentRates.childFollowUpRate,
+          childNoShowIntakeRate: currentRates.childNoShowIntakeRate,
+          childNoShowFollowUpRate: currentRates.childNoShowFollowUpRate,
           availabilityRetainerRate: currentRates.availabilityRetainerRate,
           adminRate: currentRates.adminRate,
           trainingRate: currentRates.trainingRate,
+          contractTypeIdentifier: currentRates.contractTypeIdentifier,
           effectiveDate: currentRates.effectiveDate,
         });
       } else {
@@ -167,9 +185,18 @@ const StaffPage: React.FC = () => {
           followUpSessionRate: currentRates.followUpSessionRate,
           noShowIntakeRate: currentRates.noShowIntakeRate,
           noShowFollowUpRate: currentRates.noShowFollowUpRate,
+          adultIntakeRate: currentRates.adultIntakeRate,
+          adultFollowUpRate: currentRates.adultFollowUpRate,
+          adultNoShowIntakeRate: currentRates.adultNoShowIntakeRate,
+          adultNoShowFollowUpRate: currentRates.adultNoShowFollowUpRate,
+          childIntakeRate: currentRates.childIntakeRate,
+          childFollowUpRate: currentRates.childFollowUpRate,
+          childNoShowIntakeRate: currentRates.childNoShowIntakeRate,
+          childNoShowFollowUpRate: currentRates.childNoShowFollowUpRate,
           availabilityRetainerRate: currentRates.availabilityRetainerRate,
           adminRate: currentRates.adminRate,
           trainingRate: currentRates.trainingRate,
+          contractTypeIdentifier: currentRates.contractTypeIdentifier,
           effectiveDate: currentRates.effectiveDate,
         });
       }
@@ -233,9 +260,18 @@ const StaffPage: React.FC = () => {
       followUpSessionRate: 0,
       noShowIntakeRate: 0,
       noShowFollowUpRate: 0,
+      adultIntakeRate: 0,
+      adultFollowUpRate: 0,
+      adultNoShowIntakeRate: 0,
+      adultNoShowFollowUpRate: 0,
+      childIntakeRate: 0,
+      childFollowUpRate: 0,
+      childNoShowIntakeRate: 0,
+      childNoShowFollowUpRate: 0,
       availabilityRetainerRate: 0,
       adminRate: 0,
       trainingRate: 0,
+      contractTypeIdentifier: "",
       effectiveDate: new Date().toISOString(),
     });
     setIsRatesEditing(false);
@@ -438,7 +474,7 @@ const StaffPage: React.FC = () => {
 
       {/* Dialog for Staff Rates */}
       <Dialog open={isRatesDialogOpen} onOpenChange={setIsRatesDialogOpen}>
-        <DialogContent>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{isRatesEditing ? "Edit Staff Rates" : "Add Staff Rates"}</DialogTitle>
           </DialogHeader>
@@ -462,124 +498,247 @@ const StaffPage: React.FC = () => {
                   </SelectContent>
                 </Select>
               </div>
+              
               <div className="grid w-full items-center gap-2">
-                <Label htmlFor="intakeSessionRate">Intake Session Rate (ILS)</Label>
+                <Label htmlFor="contractTypeIdentifier">Contract Type Identifier</Label>
                 <Input
-                  id="intakeSessionRate"
-                  name="intakeSessionRate"
-                  type="number"
-                  value={currentRates.intakeSessionRate}
-                  onChange={handleRateChange}
-                  required
-                  min={0}
+                  id="contractTypeIdentifier"
+                  name="contractTypeIdentifier"
+                  value={currentRates.contractTypeIdentifier}
+                  onChange={(e) => setCurrentRates({ ...currentRates, contractTypeIdentifier: e.target.value })}
+                  placeholder="e.g., Special Contract, Standard, etc."
                 />
               </div>
-              <div className="grid w-full items-center gap-2">
-                <Label htmlFor="followUpSessionRate">Follow-Up Session Rate (ILS)</Label>
-                <Input
-                  id="followUpSessionRate"
-                  name="followUpSessionRate"
-                  type="number"
-                  value={currentRates.followUpSessionRate}
-                  onChange={handleRateChange}
-                  required
-                  min={0}
-                />
-              </div>
-              <div className="grid w-full items-center gap-2">
-                <Label htmlFor="noShowIntakeRate">No-Show Intake Rate (ILS)</Label>
-                <Input
-                  id="noShowIntakeRate"
-                  name="noShowIntakeRate"
-                  type="number"
-                  value={currentRates.noShowIntakeRate}
-                  onChange={handleRateChange}
-                  required
-                  min={0}
-                />
-              </div>
-              <div className="grid w-full items-center gap-2">
-                <Label htmlFor="noShowFollowUpRate">No-Show Follow-Up Rate (ILS)</Label>
-                <Input
-                  id="noShowFollowUpRate"
-                  name="noShowFollowUpRate"
-                  type="number"
-                  value={currentRates.noShowFollowUpRate}
-                  onChange={handleRateChange}
-                  required
-                  min={0}
-                />
-              </div>
-              <div className="grid w-full items-center gap-2">
-                <Label htmlFor="availabilityRetainerRate">Availability Retainer Rate (ILS)</Label>
-                <Input
-                  id="availabilityRetainerRate"
-                  name="availabilityRetainerRate"
-                  type="number"
-                  value={currentRates.availabilityRetainerRate}
-                  onChange={handleRateChange}
-                  required
-                  min={0}
-                />
-              </div>
-              <div className="grid w-full items-center gap-2">
-                <Label htmlFor="adminRate">Admin Rate (ILS)</Label>
-                <Input
-                  id="adminRate"
-                  name="adminRate"
-                  type="number"
-                  value={currentRates.adminRate}
-                  onChange={handleRateChange}
-                  required
-                  min={0}
-                />
-              </div>
-              <div className="grid w-full items-center gap-2">
-                <Label htmlFor="trainingRate">Training Rate (ILS)</Label>
-                <Input
-                  id="trainingRate"
-                  name="trainingRate"
-                  type="number"
-                  value={currentRates.trainingRate}
-                  onChange={handleRateChange}
-                  required
-                  min={0}
-                />
-              </div>
-              <div className="grid w-full items-center gap-2">
-                <Label htmlFor="effectiveDate">Effective Date</Label>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant={"outline"}
-                      className={cn(
-                        "w-[240px] justify-start text-left font-normal",
-                        !currentRates.effectiveDate && "text-muted-foreground"
-                      )}
-                    >
-                      <CalendarIcon className="mr-2 h-4 w-4" />
-                      {currentRates.effectiveDate ? (
-                        format(new Date(currentRates.effectiveDate), "PPP")
-                      ) : (
-                        <span>Pick a date</span>
-                      )}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0" align="start">
-                    <Calendar
-                      mode="single"
-                      selected={currentRates.effectiveDate ? new Date(currentRates.effectiveDate) : undefined}
-                      onSelect={(date) => {
-                        const selectedDate = date ? format(date, "yyyy-MM-dd") : undefined;
-                        setCurrentRates({ ...currentRates, effectiveDate: selectedDate });
-                      }}
-                      disabled={(date) =>
-                        date > new Date()
-                      }
-                      initialFocus
+
+              {/* Adult Rates Section */}
+              <div className="border rounded-lg p-4 space-y-4">
+                <h3 className="text-lg font-medium">Adult Service Rates</h3>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="grid w-full items-center gap-2">
+                    <Label htmlFor="adultIntakeRate">Adult Intake Rate (ILS)</Label>
+                    <Input
+                      id="adultIntakeRate"
+                      name="adultIntakeRate"
+                      type="number"
+                      value={currentRates.adultIntakeRate}
+                      onChange={handleRateChange}
+                      min={0}
                     />
-                  </PopoverContent>
-                </Popover>
+                  </div>
+                  <div className="grid w-full items-center gap-2">
+                    <Label htmlFor="adultFollowUpRate">Adult Follow-Up Rate (ILS)</Label>
+                    <Input
+                      id="adultFollowUpRate"
+                      name="adultFollowUpRate"
+                      type="number"
+                      value={currentRates.adultFollowUpRate}
+                      onChange={handleRateChange}
+                      min={0}
+                    />
+                  </div>
+                  <div className="grid w-full items-center gap-2">
+                    <Label htmlFor="adultNoShowIntakeRate">Adult No-Show Intake Rate (ILS)</Label>
+                    <Input
+                      id="adultNoShowIntakeRate"
+                      name="adultNoShowIntakeRate"
+                      type="number"
+                      value={currentRates.adultNoShowIntakeRate}
+                      onChange={handleRateChange}
+                      min={0}
+                    />
+                  </div>
+                  <div className="grid w-full items-center gap-2">
+                    <Label htmlFor="adultNoShowFollowUpRate">Adult No-Show Follow-Up Rate (ILS)</Label>
+                    <Input
+                      id="adultNoShowFollowUpRate"
+                      name="adultNoShowFollowUpRate"
+                      type="number"
+                      value={currentRates.adultNoShowFollowUpRate}
+                      onChange={handleRateChange}
+                      min={0}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Child Rates Section */}
+              <div className="border rounded-lg p-4 space-y-4">
+                <h3 className="text-lg font-medium">Child Service Rates</h3>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="grid w-full items-center gap-2">
+                    <Label htmlFor="childIntakeRate">Child Intake Rate (ILS)</Label>
+                    <Input
+                      id="childIntakeRate"
+                      name="childIntakeRate"
+                      type="number"
+                      value={currentRates.childIntakeRate}
+                      onChange={handleRateChange}
+                      min={0}
+                    />
+                  </div>
+                  <div className="grid w-full items-center gap-2">
+                    <Label htmlFor="childFollowUpRate">Child Follow-Up Rate (ILS)</Label>
+                    <Input
+                      id="childFollowUpRate"
+                      name="childFollowUpRate"
+                      type="number"
+                      value={currentRates.childFollowUpRate}
+                      onChange={handleRateChange}
+                      min={0}
+                    />
+                  </div>
+                  <div className="grid w-full items-center gap-2">
+                    <Label htmlFor="childNoShowIntakeRate">Child No-Show Intake Rate (ILS)</Label>
+                    <Input
+                      id="childNoShowIntakeRate"
+                      name="childNoShowIntakeRate"
+                      type="number"
+                      value={currentRates.childNoShowIntakeRate}
+                      onChange={handleRateChange}
+                      min={0}
+                    />
+                  </div>
+                  <div className="grid w-full items-center gap-2">
+                    <Label htmlFor="childNoShowFollowUpRate">Child No-Show Follow-Up Rate (ILS)</Label>
+                    <Input
+                      id="childNoShowFollowUpRate"
+                      name="childNoShowFollowUpRate"
+                      type="number"
+                      value={currentRates.childNoShowFollowUpRate}
+                      onChange={handleRateChange}
+                      min={0}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Legacy Rates Section (for backward compatibility) */}
+              <div className="border rounded-lg p-4 space-y-4 bg-gray-50">
+                <h3 className="text-lg font-medium text-gray-600">Legacy Rates (Backward Compatibility)</h3>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="grid w-full items-center gap-2">
+                    <Label htmlFor="intakeSessionRate">Intake Session Rate (ILS)</Label>
+                    <Input
+                      id="intakeSessionRate"
+                      name="intakeSessionRate"
+                      type="number"
+                      value={currentRates.intakeSessionRate}
+                      onChange={handleRateChange}
+                      min={0}
+                    />
+                  </div>
+                  <div className="grid w-full items-center gap-2">
+                    <Label htmlFor="followUpSessionRate">Follow-Up Session Rate (ILS)</Label>
+                    <Input
+                      id="followUpSessionRate"
+                      name="followUpSessionRate"
+                      type="number"
+                      value={currentRates.followUpSessionRate}
+                      onChange={handleRateChange}
+                      min={0}
+                    />
+                  </div>
+                  <div className="grid w-full items-center gap-2">
+                    <Label htmlFor="noShowIntakeRate">No-Show Intake Rate (ILS)</Label>
+                    <Input
+                      id="noShowIntakeRate"
+                      name="noShowIntakeRate"
+                      type="number"
+                      value={currentRates.noShowIntakeRate}
+                      onChange={handleRateChange}
+                      min={0}
+                    />
+                  </div>
+                  <div className="grid w-full items-center gap-2">
+                    <Label htmlFor="noShowFollowUpRate">No-Show Follow-Up Rate (ILS)</Label>
+                    <Input
+                      id="noShowFollowUpRate"
+                      name="noShowFollowUpRate"
+                      type="number"
+                      value={currentRates.noShowFollowUpRate}
+                      onChange={handleRateChange}
+                      min={0}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Other Rates Section */}
+              <div className="border rounded-lg p-4 space-y-4">
+                <h3 className="text-lg font-medium">Other Rates</h3>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="grid w-full items-center gap-2">
+                    <Label htmlFor="availabilityRetainerRate">Availability Retainer Rate (ILS)</Label>
+                    <Input
+                      id="availabilityRetainerRate"
+                      name="availabilityRetainerRate"
+                      type="number"
+                      value={currentRates.availabilityRetainerRate}
+                      onChange={handleRateChange}
+                      required
+                      min={0}
+                    />
+                  </div>
+                  <div className="grid w-full items-center gap-2">
+                    <Label htmlFor="adminRate">Admin Rate (ILS)</Label>
+                    <Input
+                      id="adminRate"
+                      name="adminRate"
+                      type="number"
+                      value={currentRates.adminRate}
+                      onChange={handleRateChange}
+                      required
+                      min={0}
+                    />
+                  </div>
+                  <div className="grid w-full items-center gap-2">
+                    <Label htmlFor="trainingRate">Training Rate (ILS)</Label>
+                    <Input
+                      id="trainingRate"
+                      name="trainingRate"
+                      type="number"
+                      value={currentRates.trainingRate}
+                      onChange={handleRateChange}
+                      required
+                      min={0}
+                    />
+                  </div>
+                  <div className="grid w-full items-center gap-2">
+                    <Label htmlFor="effectiveDate">Effective Date</Label>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant={"outline"}
+                          className={cn(
+                            "w-[240px] justify-start text-left font-normal",
+                            !currentRates.effectiveDate && "text-muted-foreground"
+                          )}
+                        >
+                          <CalendarIcon className="mr-2 h-4 w-4" />
+                          {currentRates.effectiveDate ? (
+                            format(new Date(currentRates.effectiveDate), "PPP")
+                          ) : (
+                            <span>Pick a date</span>
+                          )}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <Calendar
+                          mode="single"
+                          selected={currentRates.effectiveDate ? new Date(currentRates.effectiveDate) : undefined}
+                          onSelect={(date) => {
+                            const selectedDate = date ? format(date, "yyyy-MM-dd") : undefined;
+                            setCurrentRates({ ...currentRates, effectiveDate: selectedDate });
+                          }}
+                          disabled={(date) =>
+                            date > new Date()
+                          }
+                          initialFocus
+                        />
+                      </PopoverContent>
+                    </Popover>
+                  </div>
+                </div>
               </div>
             </div>
             <DialogFooter className="mt-4">
