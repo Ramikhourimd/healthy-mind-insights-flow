@@ -1174,6 +1174,20 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     updateFinancialSummary();
   }, [clinicalSessions, revenueSources, fixedOverheads, adminStaffFinancials, currentPeriod]);
 
+  // Add the missing updateSettings function
+  const updateSettings = async (newSettings: FinancialSettings): Promise<FinancialSettings> => {
+    try {
+      // For now, we'll just update the local state
+      // In the future, this could save to Supabase if needed
+      setSettings(newSettings);
+      console.log('Settings updated:', newSettings);
+      return newSettings;
+    } catch (error) {
+      console.error('Failed to update settings:', error);
+      throw error;
+    }
+  };
+
   const value: FinanceContextType = {
     clinicalSessions,
     fetchClinicalSessions,
