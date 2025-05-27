@@ -115,6 +115,81 @@ const ExpensesPage: React.FC = () => {
     session => session.month === currentPeriod.month && session.year === currentPeriod.year
   );
 
+  // Calculate detailed clinical staff breakdown with proper cost calculation
+  const calculateClinicalStaffBreakdown = () => {
+    const breakdown: { [staffId: string]: { name: string; sessions: any[]; totalCost: number } } = {};
+    
+    console.log("Calculating clinical breakdown with filtered sessions:", filteredSessions);
+    console.log("Clinical staff rates:", clinicalStaffRates);
+    
+    filteredSessions.forEach(session => {
+      if (!breakdown[session.staffId]) {
+        breakdown[session.staffId] = {
+          name: getStaffNameById(session.staffId),
+          sessions: [],
+          totalCost: 0
+        };
+      }
+      
+      const staffRates = clinicalStaffRates.find(r => r.staffId === session.staffId);
+      let sessionCost = 0;
+      
+      if (staffRates) {
+        if (session.showStatus === "Show") {
+          if (session.meetingType === "Intake") {
+            sessionCost = Number(staffRates.intakeSessionRate) * session.count;
+          } else if (session.meetingType === "FollowUp") {
+            sessionCost = Number(staffRates.followUpSessionRate) * session.count;
+          }
+        } else if (session.showStatus === "NoShow") {
+          if (session.meetingType === "Intake") {
+            sessionCost = Number(staffRates.noShowIntakeRate) * session.count;
+          } else if (session.meetingType === "FollowUp") {
+            sessionCost = Number(staffRates.noShowFollowUpRate) * session.count;
+          }
+        }
+      } else {
+        // Default rates if no staff rates found
+        const defaultRate = session.meetingType === "Intake" ? 600 : 450;
+        const noShowMultiplier = session.showStatus === "NoShow" ? 0.5 : 1;
+        sessionCost = defaultRate * session.count * noShowMultiplier;
+      }
+      
+      console.log(`Session cost for ${session.staffId}, ${session.meetingType}, ${session.showStatus}:`, sessionCost);
+      
+      breakdown[session.staffId].sessions.push({
+        ...session,
+        cost: sessionCost,
+        rate: sessionCost / session.count
+      });
+      breakdown[session.staffId].totalCost += sessionCost;
+    });
+    
+    console.log("Final clinical breakdown:", breakdown);
+    return breakdown;
+  };
+
+  const clinicalBreakdown = calculateClinicalStaffBreakdown();
+  
+  // Calculate total clinical costs from breakdown
+  const totalClinicalCosts = Object.values(clinicalBreakdown).reduce((sum, staff) => sum + staff.totalCost, 0);
+  
+  // Calculate total admin costs
+  const totalAdminCosts = filteredAdminStaff.reduce((sum, staff) => sum + staff.baseSalary + staff.commission, 0);
+  
+  // Calculate total fixed overheads
+  const totalFixedOverheads = filteredOverheads.reduce((sum, overhead) => sum + overhead.monthlyCost, 0);
+  
+  // Calculate total expenses
+  const totalExpenses = totalClinicalCosts + totalAdminCosts + totalFixedOverheads;
+  
+  console.log("Expense calculations:", {
+    totalClinicalCosts,
+    totalAdminCosts,
+    totalFixedOverheads,
+    totalExpenses
+  });
+
   // State for the overhead form
   const [isOverheadDialogOpen, setIsOverheadDialogOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
@@ -374,58 +449,6 @@ const ExpensesPage: React.FC = () => {
     return staff ? staff.name : "Unknown Staff";
   };
 
-  // Calculate detailed clinical staff breakdown
-  const calculateClinicalStaffBreakdown = () => {
-    const breakdown: { [staffId: string]: { name: string; sessions: any[]; totalCost: number } } = {};
-    
-    filteredSessions.forEach(session => {
-      if (!breakdown[session.staffId]) {
-        breakdown[session.staffId] = {
-          name: getStaffNameById(session.staffId),
-          sessions: [],
-          totalCost: 0
-        };
-      }
-      
-      const staffRates = clinicalStaffRates.find(r => r.staffId === session.staffId);
-      let sessionCost = 0;
-      
-      if (staffRates) {
-        if (session.showStatus === "Show") {
-          if (session.meetingType === "Intake") {
-            sessionCost = staffRates.intakeSessionRate * session.count;
-          } else if (session.meetingType === "FollowUp") {
-            sessionCost = staffRates.followUpSessionRate * session.count;
-          }
-        } else if (session.showStatus === "NoShow") {
-          if (session.meetingType === "Intake") {
-            sessionCost = staffRates.noShowIntakeRate * session.count;
-          } else if (session.meetingType === "FollowUp") {
-            sessionCost = staffRates.noShowFollowUpRate * session.count;
-          }
-        }
-      } else {
-        const defaultRate = session.meetingType === "Intake" ? 600 : 450;
-        const noShowMultiplier = session.showStatus === "NoShow" ? 0.5 : 1;
-        sessionCost = defaultRate * session.count * noShowMultiplier;
-      }
-      
-      breakdown[session.staffId].sessions.push({
-        ...session,
-        cost: sessionCost,
-        rate: sessionCost / session.count
-      });
-      breakdown[session.staffId].totalCost += sessionCost;
-    });
-    
-    return breakdown;
-  };
-
-  // Calculate total admin costs
-  const totalAdminCosts = filteredAdminStaff.reduce((sum, staff) => sum + staff.baseSalary + staff.commission, 0);
-
-  const clinicalBreakdown = calculateClinicalStaffBreakdown();
-
   // Add the missing handleImportSessions function
   const handleImportSessions = async (sessions: any[]) => {
     try {
@@ -500,9 +523,9 @@ const ExpensesPage: React.FC = () => {
                         </CollapsibleTrigger>
                       </Collapsible>
                     </TableCell>
-                    <TableCell className="text-right">{formatCurrency(financialSummary.totalClinicalCosts)}</TableCell>
+                    <TableCell className="text-right">{formatCurrency(totalClinicalCosts)}</TableCell>
                     <TableCell className="text-right">
-                      {(financialSummary.totalClinicalCosts / financialSummary.totalExpenses * 100).toFixed(1)}%
+                      {totalExpenses > 0 ? (totalClinicalCosts / totalExpenses * 100).toFixed(1) : 0}%
                     </TableCell>
                     <TableCell></TableCell>
                   </TableRow>
@@ -517,7 +540,7 @@ const ExpensesPage: React.FC = () => {
                           </TableCell>
                           <TableCell className="text-right text-sm">{formatCurrency(data.totalCost)}</TableCell>
                           <TableCell className="text-right text-sm">
-                            {(data.totalCost / financialSummary.totalClinicalCosts * 100).toFixed(1)}%
+                            {totalClinicalCosts > 0 ? (data.totalCost / totalClinicalCosts * 100).toFixed(1) : 0}%
                           </TableCell>
                           <TableCell></TableCell>
                         </TableRow>
@@ -537,7 +560,7 @@ const ExpensesPage: React.FC = () => {
                     </TableCell>
                     <TableCell className="text-right">{formatCurrency(totalAdminCosts)}</TableCell>
                     <TableCell className="text-right">
-                      {(totalAdminCosts / financialSummary.totalExpenses * 100).toFixed(1)}%
+                      {totalExpenses > 0 ? (totalAdminCosts / totalExpenses * 100).toFixed(1) : 0}%
                     </TableCell>
                     <TableCell></TableCell>
                   </TableRow>
@@ -557,7 +580,7 @@ const ExpensesPage: React.FC = () => {
                             </div>
                           </TableCell>
                           <TableCell className="text-right text-sm">
-                            {((staff.baseSalary + staff.commission) / totalAdminCosts * 100).toFixed(1)}%
+                            {totalAdminCosts > 0 ? ((staff.baseSalary + staff.commission) / totalAdminCosts * 100).toFixed(1) : 0}%
                           </TableCell>
                           <TableCell></TableCell>
                         </TableRow>
@@ -575,9 +598,9 @@ const ExpensesPage: React.FC = () => {
                         </CollapsibleTrigger>
                       </Collapsible>
                     </TableCell>
-                    <TableCell className="text-right">{formatCurrency(financialSummary.totalFixedOverheads)}</TableCell>
+                    <TableCell className="text-right">{formatCurrency(totalFixedOverheads)}</TableCell>
                     <TableCell className="text-right">
-                      {(financialSummary.totalFixedOverheads / financialSummary.totalExpenses * 100).toFixed(1)}%
+                      {totalExpenses > 0 ? (totalFixedOverheads / totalExpenses * 100).toFixed(1) : 0}%
                     </TableCell>
                     <TableCell></TableCell>
                   </TableRow>
@@ -592,7 +615,7 @@ const ExpensesPage: React.FC = () => {
                           </TableCell>
                           <TableCell className="text-right text-sm">{formatCurrency(overhead.monthlyCost)}</TableCell>
                           <TableCell className="text-right text-sm">
-                            {(overhead.monthlyCost / financialSummary.totalFixedOverheads * 100).toFixed(1)}%
+                            {totalFixedOverheads > 0 ? (overhead.monthlyCost / totalFixedOverheads * 100).toFixed(1) : 0}%
                           </TableCell>
                           <TableCell></TableCell>
                         </TableRow>
@@ -603,7 +626,7 @@ const ExpensesPage: React.FC = () => {
                   {/* Total */}
                   <TableRow className="border-t-2 border-gray-300">
                     <TableCell className="font-bold">Total Expenses</TableCell>
-                    <TableCell className="text-right font-bold">{formatCurrency(financialSummary.totalExpenses)}</TableCell>
+                    <TableCell className="text-right font-bold">{formatCurrency(totalExpenses)}</TableCell>
                     <TableCell className="text-right font-bold">100%</TableCell>
                     <TableCell></TableCell>
                   </TableRow>
@@ -653,7 +676,7 @@ const ExpensesPage: React.FC = () => {
                   <TableRow>
                     <TableCell className="font-bold">Total Fixed Overheads</TableCell>
                     <TableCell className="text-right font-bold">
-                      {formatCurrency(financialSummary.totalFixedOverheads)}
+                      {formatCurrency(totalFixedOverheads)}
                     </TableCell>
                     <TableCell></TableCell>
                   </TableRow>
