@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -5,7 +6,10 @@ import { extractClinicalSessionsFromExcel } from '@/utils/excelParser';
 import { 
   ClinicalSession, 
   StaffMember,
-  TimePeriod
+  TimePeriod,
+  ClinicType,
+  MeetingType,
+  ShowStatus
 } from '@/types/finance';
 import { 
   Card, 

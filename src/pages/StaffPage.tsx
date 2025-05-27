@@ -97,8 +97,9 @@ const StaffPage: React.FC = () => {
   };
 
   // Handle staff form changes
-  const handleStaffChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    const { name, value, type, checked } = e.target;
+  const handleStaffChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value, type } = e.target;
+    const checked = e.target.type === 'checkbox' ? e.target.checked : undefined;
     setCurrentStaff({
       ...currentStaff,
       [name]: type === "checkbox" ? checked : value,
@@ -329,8 +330,6 @@ const StaffPage: React.FC = () => {
               <div className="grid w-full items-center gap-2">
                 <Label htmlFor="role">Role</Label>
                 <Select
-                  id="role"
-                  name="role"
                   value={currentStaff.role}
                   onValueChange={(value) => setCurrentStaff({ ...currentStaff, role: value as "Psychiatrist" | "CaseManager" | "Admin" })}
                 >
