@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { 
@@ -100,6 +99,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const [clinicalStaffRates, setClinicalStaffRates] = useState<ClinicalStaffRates[]>([]);
   const [fixedOverheads, setFixedOverheads] = useState<FixedOverhead[]>([]);
   const [adminStaffFinancials, setAdminStaffFinancials] = useState<AdminStaffFinancials[]>([]);
+  const [adminTrainingHours, setAdminTrainingHours] = useState<AdminTrainingHours[]>([]);
   const [currentPeriod, setCurrentPeriod] = useState<TimePeriod>({
     month: new Date().getMonth() + 1,
     year: new Date().getFullYear(),
@@ -109,6 +109,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     totalClinicalCosts: 0,
     totalAdminCosts: 0,
     totalFixedOverheads: 0,
+    totalAdminTrainingCosts: 0,
     totalExpenses: 0,
     grossProfit: 0,
     operatingProfit: 0,
@@ -1175,6 +1176,125 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     ) || null;
   };
 
+  // Fetch admin training hours
+  const fetchAdminTrainingHours = async (): Promise<AdminTrainingHours[]> => {
+    try {
+      const { data, error } = await supabase
+        .from('admin_training_hours')
+        .select('*')
+        .order('year', { ascending: false })
+        .order('month', { ascending: false });
+
+      if (error) throw error;
+
+      const transformedHours: AdminTrainingHours[] = data.map((row) => ({
+        id: row.id,
+        staffId: row.staff_id,
+        adminHours: Number(row.admin_hours),
+        trainingHours: Number(row.training_hours),
+        month: row.month,
+        year: row.year,
+      }));
+
+      setAdminTrainingHours(transformedHours);
+      return transformedHours;
+    } catch (error) {
+      console.error('Failed to fetch admin training hours:', error);
+      return [];
+    }
+  };
+
+  // Add admin training hours
+  const addAdminTrainingHours = async (hoursData: Omit<AdminTrainingHours, "id">): Promise<AdminTrainingHours> => {
+    try {
+      const { data, error } = await supabase
+        .from('admin_training_hours')
+        .insert([{
+          staff_id: hoursData.staffId,
+          admin_hours: hoursData.adminHours,
+          training_hours: hoursData.trainingHours,
+          month: hoursData.month,
+          year: hoursData.year,
+        }])
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      const newHours: AdminTrainingHours = {
+        id: data.id,
+        staffId: data.staff_id,
+        adminHours: Number(data.admin_hours),
+        trainingHours: Number(data.training_hours),
+        month: data.month,
+        year: data.year,
+      };
+
+      setAdminTrainingHours(prev => [...prev, newHours]);
+      updateFinancialSummary();
+      return newHours;
+    } catch (error) {
+      console.error('Failed to add admin training hours:', error);
+      throw error;
+    }
+  };
+
+  // Update admin training hours
+  const updateAdminTrainingHours = async (hoursData: AdminTrainingHours): Promise<AdminTrainingHours> => {
+    try {
+      const { data, error } = await supabase
+        .from('admin_training_hours')
+        .update({
+          staff_id: hoursData.staffId,
+          admin_hours: hoursData.adminHours,
+          training_hours: hoursData.trainingHours,
+          month: hoursData.month,
+          year: hoursData.year,
+        })
+        .eq('id', hoursData.id)
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      const updatedHours: AdminTrainingHours = {
+        id: data.id,
+        staffId: data.staff_id,
+        adminHours: Number(data.admin_hours),
+        trainingHours: Number(data.training_hours),
+        month: data.month,
+        year: data.year,
+      };
+
+      setAdminTrainingHours(prev => prev.map(hours => 
+        hours.id === hoursData.id ? updatedHours : hours
+      ));
+      updateFinancialSummary();
+      return updatedHours;
+    } catch (error) {
+      console.error('Failed to update admin training hours:', error);
+      throw error;
+    }
+  };
+
+  // Delete admin training hours
+  const deleteAdminTrainingHours = async (id: string): Promise<void> => {
+    try {
+      const { error } = await supabase
+        .from('admin_training_hours')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+
+      setAdminTrainingHours(prev => prev.filter(hours => hours.id !== id));
+      updateFinancialSummary();
+    } catch (error) {
+      console.error('Failed to delete admin training hours:', error);
+      throw error;
+    }
+  };
+
   // Calculate revenue from clinical sessions automatically
   const calculateRevenueFromSessions = () => {
     const filteredSessions = clinicalSessions.filter(
@@ -1240,6 +1360,9 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     const filteredSessions = clinicalSessions.filter(
       session => session.month === currentPeriod.month && session.year === currentPeriod.year
     );
+    const filteredAdminTrainingHours = adminTrainingHours.filter(
+      hours => hours.month === currentPeriod.month && hours.year === currentPeriod.year
+    );
 
     const totalRevenue = allRevenue.reduce((sum, source) => sum + (source.quantity * source.ratePerUnit), 0);
     const totalFixedOverheads = filteredOverheads.reduce((sum, overhead) => sum + overhead.monthlyCost, 0);
@@ -1292,11 +1415,23 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
         }
       }
     });
+
+    // Calculate admin/training hours costs
+    let totalAdminTrainingCosts = 0;
+    filteredAdminTrainingHours.forEach(hours => {
+      const staffRates = clinicalStaffRates.find(r => r.staffId === hours.staffId);
+      if (staffRates) {
+        const adminCost = hours.adminHours * (staffRates.admin_rate || 0);
+        const trainingCost = hours.trainingHours * (staffRates.training_rate || 0);
+        totalAdminTrainingCosts += adminCost + trainingCost;
+      }
+    });
     
     console.log('FinanceContext calculated clinical costs:', totalClinicalCosts);
+    console.log('FinanceContext calculated admin/training costs:', totalAdminTrainingCosts);
     console.log('FinanceContext calculated total revenue:', totalRevenue);
 
-    const totalExpenses = totalClinicalCosts + totalAdminCosts + totalFixedOverheads;
+    const totalExpenses = totalClinicalCosts + totalAdminCosts + totalFixedOverheads + totalAdminTrainingCosts;
     const operatingProfit = totalRevenue - totalExpenses;
 
     const summary: FinancialSummary = {
@@ -1304,6 +1439,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
       totalClinicalCosts,
       totalAdminCosts,
       totalFixedOverheads,
+      totalAdminTrainingCosts,
       totalExpenses,
       grossProfit: totalRevenue - totalClinicalCosts,
       operatingProfit,
@@ -1323,12 +1459,13 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     fetchClinicalStaffRates();
     fetchFixedOverheads();
     fetchAdminStaffFinancials();
-    fetchClinicRates(); // Add this line
+    fetchClinicRates();
+    fetchAdminTrainingHours();
   }, []);
 
   useEffect(() => {
     updateFinancialSummary();
-  }, [clinicalSessions, revenueSources, fixedOverheads, adminStaffFinancials, currentPeriod]);
+  }, [clinicalSessions, revenueSources, fixedOverheads, adminStaffFinancials, adminTrainingHours, currentPeriod]);
 
   // Add the missing updateSettings function
   const updateSettings = async (newSettings: FinancialSettings): Promise<FinancialSettings> => {
@@ -1372,6 +1509,10 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     addAdminStaff,
     updateAdminStaff,
     deleteAdminStaff,
+    adminTrainingHours,
+    addAdminTrainingHours,
+    updateAdminTrainingHours,
+    deleteAdminTrainingHours,
     currentPeriod,
     setCurrentPeriod,
     financialSummary,
