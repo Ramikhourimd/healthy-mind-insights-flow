@@ -17,6 +17,7 @@ const StaffPerformanceTab: React.FC = () => {
   const { toast } = useToast();
   
   const [performanceMetrics, setPerformanceMetrics] = useState<StaffPerformanceMetrics[]>([]);
+  const [noShowRates, setNoShowRates] = useState<{[key: string]: number}>({});
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [currentMetrics, setCurrentMetrics] = useState<Omit<StaffPerformanceMetrics, "id"> & { id?: string }>({
@@ -40,29 +41,16 @@ const StaffPerformanceTab: React.FC = () => {
 
       if (error) throw error;
 
-      // Calculate no-show rates for each staff member
-      const metricsWithNoShowRates = await Promise.all(
-        (data || []).map(async (metric) => {
-          const { data: noShowRate } = await supabase
-            .rpc('calculate_staff_no_show_rate', {
-              p_staff_id: metric.staff_id,
-              p_month: currentPeriod.month,
-              p_year: currentPeriod.year
-            });
+      const formattedMetrics = (data || []).map(metric => ({
+        id: metric.id,
+        staffId: metric.staff_id,
+        month: metric.month,
+        year: metric.year,
+        satisfactionScore: metric.satisfaction_score || undefined,
+        availableHours: metric.available_hours,
+      }));
 
-          return {
-            id: metric.id,
-            staffId: metric.staff_id,
-            month: metric.month,
-            year: metric.year,
-            satisfactionScore: metric.satisfaction_score || undefined,
-            availableHours: metric.available_hours,
-            noShowRate: noShowRate || 0,
-          };
-        })
-      );
-
-      setPerformanceMetrics(metricsWithNoShowRates);
+      setPerformanceMetrics(formattedMetrics);
     } catch (error) {
       console.error("Error fetching performance metrics:", error);
       toast({
@@ -75,25 +63,33 @@ const StaffPerformanceTab: React.FC = () => {
     }
   };
 
-  // Calculate no-show rate for staff members without metrics
-  const getNoShowRateForStaff = async (staffId: string) => {
-    try {
-      const { data: noShowRate } = await supabase
-        .rpc('calculate_staff_no_show_rate', {
-          p_staff_id: staffId,
-          p_month: currentPeriod.month,
-          p_year: currentPeriod.year
-        });
-      return noShowRate || 0;
-    } catch (error) {
-      console.error("Error calculating no-show rate:", error);
-      return 0;
+  // Calculate no-show rates for all clinical staff
+  const calculateNoShowRates = async () => {
+    const clinicalStaff = staffMembers.filter(s => s.role === "Psychiatrist" || s.role === "CaseManager");
+    const rates: {[key: string]: number} = {};
+
+    for (const staff of clinicalStaff) {
+      try {
+        const { data: noShowRate } = await supabase
+          .rpc('calculate_staff_no_show_rate', {
+            p_staff_id: staff.id,
+            p_month: currentPeriod.month,
+            p_year: currentPeriod.year
+          });
+        rates[staff.id] = noShowRate || 0;
+      } catch (error) {
+        console.error(`Error calculating no-show rate for ${staff.name}:`, error);
+        rates[staff.id] = 0;
+      }
     }
+
+    setNoShowRates(rates);
   };
 
   useEffect(() => {
     fetchPerformanceMetrics();
-  }, [currentPeriod]);
+    calculateNoShowRates();
+  }, [currentPeriod, staffMembers]);
 
   // Get staff name by ID
   const getStaffNameById = (id: string) => {
@@ -222,6 +218,8 @@ const StaffPerformanceTab: React.FC = () => {
               {clinicalStaff.length > 0 ? (
                 clinicalStaff.map((staff) => {
                   const metrics = getMetricsForStaff(staff.id);
+                  const noShowRate = noShowRates[staff.id];
+                  
                   return (
                     <TableRow key={staff.id}>
                       <TableCell>{staff.name}</TableCell>
@@ -232,7 +230,7 @@ const StaffPerformanceTab: React.FC = () => {
                         {metrics ? metrics.availableHours : "Not set"}
                       </TableCell>
                       <TableCell className="text-right">
-                        {metrics?.noShowRate !== undefined ? `${metrics.noShowRate}%` : "Calculating..."}
+                        {noShowRate !== undefined ? `${noShowRate}%` : "Calculating..."}
                       </TableCell>
                       <TableCell className="text-right">
                         {metrics ? (
