@@ -17,23 +17,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-
-interface AdminHour {
-  id: string;
-  staffId: string;
-  adminHours: number;
-  trainingHours: number;
-  month: number;
-  year: number;
-}
+import type { AdminTrainingHours, StaffMember, TimePeriod } from "@/types/finance";
 
 interface AdminHoursDialogProps {
   isOpen: boolean;
   onClose: () => void;
-  onSave: (data: Omit<AdminHour, 'id'>) => void;
-  editingHours: AdminHour | null;
-  staffMembers: any[];
-  currentPeriod: { month: number; year: number };
+  onSave: (data: Omit<AdminTrainingHours, 'id'>) => void;
+  editingHours: AdminTrainingHours | null;
+  staffMembers: StaffMember[];
+  currentPeriod: TimePeriod;
 }
 
 export const AdminHoursDialog: React.FC<AdminHoursDialogProps> = ({

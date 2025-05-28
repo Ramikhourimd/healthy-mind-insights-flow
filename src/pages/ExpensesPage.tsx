@@ -1,10 +1,10 @@
-
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useFinance } from "@/context/FinanceContext";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { getSessionCost } from "@/utils/getSessionCost";
+import { supabase } from "@/integrations/supabase/client";
 import { ExpenseSummaryCard } from "@/components/expenses/ExpenseSummaryCard";
 import { FixedOverheadsTab } from "@/components/expenses/FixedOverheadsTab";
 import { AdminStaffTab } from "@/components/expenses/AdminStaffTab";
@@ -12,6 +12,7 @@ import ClinicalStaffTab from "@/components/expenses/ClinicalStaffTab";
 import AdminHoursTab from "@/components/expenses/AdminHoursTab";
 import { OverheadDialog } from "@/components/expenses/dialogs/OverheadDialog";
 import { AdminStaffDialog } from "@/components/expenses/dialogs/AdminStaffDialog";
+import type { AdminTrainingHours } from "@/types/finance";
 
 const ExpensesPage: React.FC = () => {
   const { toast } = useToast();
@@ -32,11 +33,44 @@ const ExpensesPage: React.FC = () => {
     getStaffRates
   } = useFinance();
   
+  // State for admin/training hours
+  const [adminTrainingHours, setAdminTrainingHours] = useState<AdminTrainingHours[]>([]);
+  
   // State for collapsible sections
   const [clinicalBreakdownOpen, setClinicalBreakdownOpen] = useState(false);
   const [adminBreakdownOpen, setAdminBreakdownOpen] = useState(false);
   const [overheadBreakdownOpen, setOverheadBreakdownOpen] = useState(false);
   const [staffDetailBreakdowns, setStaffDetailBreakdowns] = useState<{ [staffId: string]: boolean }>({});
+
+  // Load admin/training hours from Supabase
+  useEffect(() => {
+    loadAdminTrainingHours();
+  }, [currentPeriod]);
+
+  const loadAdminTrainingHours = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('admin_training_hours')
+        .select('*')
+        .eq('month', currentPeriod.month)
+        .eq('year', currentPeriod.year);
+
+      if (error) throw error;
+
+      const formattedData: AdminTrainingHours[] = data.map(item => ({
+        id: item.id,
+        staffId: item.staff_id,
+        adminHours: Number(item.admin_hours),
+        trainingHours: Number(item.training_hours),
+        month: item.month,
+        year: item.year
+      }));
+
+      setAdminTrainingHours(formattedData);
+    } catch (error) {
+      console.error('Error loading admin training hours:', error);
+    }
+  };
   
   // Memoized filtered data
   const filteredData = useMemo(() => {
@@ -56,18 +90,20 @@ const ExpensesPage: React.FC = () => {
     console.log('- Clinical sessions:', filteredSessions.length);
     console.log('- Admin staff:', filteredAdminStaff.length);
     console.log('- Fixed overheads:', filteredOverheads.length);
+    console.log('- Admin/training hours:', adminTrainingHours.length);
     console.log('- Available clinical staff rates:', clinicalStaffRates.length);
 
     return {
       filteredOverheads,
       filteredAdminStaff,
-      filteredSessions
+      filteredSessions,
+      filteredAdminTrainingHours: adminTrainingHours
     };
-  }, [fixedOverheads, adminStaffFinancials, clinicalSessions, currentPeriod, clinicalStaffRates.length]);
+  }, [fixedOverheads, adminStaffFinancials, clinicalSessions, adminTrainingHours, currentPeriod, clinicalStaffRates.length]);
 
-  // Calculate clinical breakdown
+  // Calculate clinical breakdown and admin/training hours costs
   const calculations = useMemo(() => {
-    const { filteredSessions } = filteredData;
+    const { filteredSessions, filteredAdminTrainingHours } = filteredData;
 
     console.log('Starting clinical calculations...');
     console.log('Clinical staff rates available:', clinicalStaffRates);
@@ -82,6 +118,7 @@ const ExpensesPage: React.FC = () => {
     
     let totalCalculatedClinicalCosts = 0;
 
+    // Calculate clinical session costs
     filteredSessions.forEach(session => {
       if (!clinicalBreakdown[session.staffId]) {
         const staffMember = staffMembers.find(s => s.id === session.staffId);
@@ -94,7 +131,6 @@ const ExpensesPage: React.FC = () => {
         };
       }
       
-      // Check both local state and try to find rates
       let staffRates = clinicalStaffRates.find(r => r.staffId === session.staffId);
       
       console.log(`Processing session for staff ${session.staffId} (${clinicalBreakdown[session.staffId].name}):`);
@@ -137,17 +173,30 @@ const ExpensesPage: React.FC = () => {
       
       totalCalculatedClinicalCosts += sessionCost;
     });
+
+    // Calculate admin/training hours costs
+    let totalAdminTrainingCosts = 0;
+    filteredAdminTrainingHours.forEach(hours => {
+      const staffRates = clinicalStaffRates.find(r => r.staffId === hours.staffId);
+      if (staffRates) {
+        const adminCost = hours.adminHours * (staffRates.admin_rate || 0);
+        const trainingCost = hours.trainingHours * (staffRates.training_rate || 0);
+        totalAdminTrainingCosts += adminCost + trainingCost;
+      }
+    });
     
     console.log('Clinical breakdown calculated:', clinicalBreakdown);
     console.log('Total calculated clinical costs:', totalCalculatedClinicalCosts);
+    console.log('Total admin/training costs:', totalAdminTrainingCosts);
     console.log('Financial summary clinical costs:', financialSummary?.totalClinicalCosts);
     
     return {
       clinicalBreakdown,
-      totalClinicalCosts: totalCalculatedClinicalCosts, // Use calculated value instead of financialSummary
+      totalClinicalCosts: totalCalculatedClinicalCosts,
       totalAdminCosts: financialSummary?.totalAdminCosts || 0,
       totalFixedOverheads: financialSummary?.totalFixedOverheads || 0,
-      totalExpenses: (totalCalculatedClinicalCosts + (financialSummary?.totalAdminCosts || 0) + (financialSummary?.totalFixedOverheads || 0))
+      totalAdminTrainingCosts,
+      totalExpenses: (totalCalculatedClinicalCosts + (financialSummary?.totalAdminCosts || 0) + (financialSummary?.totalFixedOverheads || 0) + totalAdminTrainingCosts)
     };
   }, [filteredData, staffMembers, clinicalStaffRates, financialSummary, toast]);
 

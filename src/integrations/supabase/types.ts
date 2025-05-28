@@ -45,6 +45,47 @@ export type Database = {
         }
         Relationships: []
       }
+      admin_training_hours: {
+        Row: {
+          admin_hours: number
+          created_at: string
+          id: string
+          month: number
+          staff_id: string
+          training_hours: number
+          updated_at: string
+          year: number
+        }
+        Insert: {
+          admin_hours?: number
+          created_at?: string
+          id?: string
+          month: number
+          staff_id: string
+          training_hours?: number
+          updated_at?: string
+          year: number
+        }
+        Update: {
+          admin_hours?: number
+          created_at?: string
+          id?: string
+          month?: number
+          staff_id?: string
+          training_hours?: number
+          updated_at?: string
+          year?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "admin_training_hours_staff_id_fkey"
+            columns: ["staff_id"]
+            isOneToOne: false
+            referencedRelation: "staff_members"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       appointments: {
         Row: {
           additional_info: string | null

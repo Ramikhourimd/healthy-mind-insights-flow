@@ -158,6 +158,18 @@ export const ExpenseSummaryCard: React.FC<ExpenseSummaryProps> = ({
               </CollapsibleContent>
             </Collapsible>
 
+            {/* Admin/Training Hours Costs */}
+            <TableRow>
+              <TableCell className="pl-4 text-sm text-gray-600">
+                Admin/Training Hours
+              </TableCell>
+              <TableCell className="text-right">{formatCurrency(calculations.totalAdminTrainingCosts || 0)}</TableCell>
+              <TableCell className="text-right">
+                {calculations.totalExpenses > 0 ? ((calculations.totalAdminTrainingCosts || 0) / calculations.totalExpenses * 100).toFixed(1) : 0}%
+              </TableCell>
+              <TableCell></TableCell>
+            </TableRow>
+
             {/* Fixed Overheads */}
             <TableRow>
               <TableCell>

@@ -1,31 +1,66 @@
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Plus, Pencil, Trash } from "lucide-react";
 import { useFinance } from "@/context/FinanceContext";
 import { AdminHoursDialog } from "./dialogs/AdminHoursDialog";
-
-interface AdminHour {
-  id: string;
-  staffId: string;
-  adminHours: number;
-  trainingHours: number;
-  month: number;
-  year: number;
-}
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
+import type { AdminTrainingHours } from "@/types/finance";
 
 const AdminHoursTab: React.FC = () => {
+  const { toast } = useToast();
   const { 
     staffMembers, 
     currentPeriod,
-    clinicalStaffRates
+    clinicalStaffRates,
+    updateFinancialSummary
   } = useFinance();
 
-  const [adminHours, setAdminHours] = useState<AdminHour[]>([]);
+  const [adminHours, setAdminHours] = useState<AdminTrainingHours[]>([]);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [editingHours, setEditingHours] = useState<AdminHour | null>(null);
+  const [editingHours, setEditingHours] = useState<AdminTrainingHours | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  // Load admin hours from Supabase
+  useEffect(() => {
+    loadAdminHours();
+  }, [currentPeriod]);
+
+  const loadAdminHours = async () => {
+    try {
+      setLoading(true);
+      const { data, error } = await supabase
+        .from('admin_training_hours')
+        .select('*')
+        .eq('month', currentPeriod.month)
+        .eq('year', currentPeriod.year);
+
+      if (error) throw error;
+
+      const formattedData: AdminTrainingHours[] = data.map(item => ({
+        id: item.id,
+        staffId: item.staff_id,
+        adminHours: Number(item.admin_hours),
+        trainingHours: Number(item.training_hours),
+        month: item.month,
+        year: item.year
+      }));
+
+      setAdminHours(formattedData);
+    } catch (error) {
+      console.error('Error loading admin hours:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load admin/training hours",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // Filter admin hours for current period
   const filteredAdminHours = adminHours.filter(
@@ -70,34 +105,89 @@ const AdminHoursTab: React.FC = () => {
   };
 
   // Handle edit hours
-  const handleEdit = (hours: AdminHour) => {
+  const handleEdit = (hours: AdminTrainingHours) => {
     setEditingHours(hours);
     setIsDialogOpen(true);
   };
 
   // Handle delete hours
-  const handleDelete = (id: string) => {
+  const handleDelete = async (id: string) => {
     if (confirm("Are you sure you want to delete these hours?")) {
-      setAdminHours(prev => prev.filter(h => h.id !== id));
+      try {
+        const { error } = await supabase
+          .from('admin_training_hours')
+          .delete()
+          .eq('id', id);
+
+        if (error) throw error;
+
+        await loadAdminHours();
+        updateFinancialSummary();
+        
+        toast({
+          title: "Success",
+          description: "Admin/training hours deleted successfully",
+        });
+      } catch (error) {
+        console.error('Error deleting admin hours:', error);
+        toast({
+          title: "Error",
+          description: "Failed to delete admin/training hours",
+          variant: "destructive",
+        });
+      }
     }
   };
 
   // Handle save hours
-  const handleSave = (hoursData: Omit<AdminHour, 'id'>) => {
-    if (editingHours) {
-      setAdminHours(prev => prev.map(h => 
-        h.id === editingHours.id 
-          ? { ...hoursData, id: editingHours.id }
-          : h
-      ));
-    } else {
-      const newHours: AdminHour = {
-        ...hoursData,
-        id: crypto.randomUUID(),
-      };
-      setAdminHours(prev => [...prev, newHours]);
+  const handleSave = async (hoursData: Omit<AdminTrainingHours, 'id'>) => {
+    try {
+      if (editingHours) {
+        // Update existing hours
+        const { error } = await supabase
+          .from('admin_training_hours')
+          .update({
+            staff_id: hoursData.staffId,
+            admin_hours: hoursData.adminHours,
+            training_hours: hoursData.trainingHours,
+            month: hoursData.month,
+            year: hoursData.year,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', editingHours.id);
+
+        if (error) throw error;
+      } else {
+        // Insert new hours
+        const { error } = await supabase
+          .from('admin_training_hours')
+          .insert({
+            staff_id: hoursData.staffId,
+            admin_hours: hoursData.adminHours,
+            training_hours: hoursData.trainingHours,
+            month: hoursData.month,
+            year: hoursData.year
+          });
+
+        if (error) throw error;
+      }
+
+      await loadAdminHours();
+      updateFinancialSummary();
+      setIsDialogOpen(false);
+      
+      toast({
+        title: "Success",
+        description: `Admin/training hours ${editingHours ? 'updated' : 'added'} successfully`,
+      });
+    } catch (error) {
+      console.error('Error saving admin hours:', error);
+      toast({
+        title: "Error",
+        description: "Failed to save admin/training hours",
+        variant: "destructive",
+      });
     }
-    setIsDialogOpen(false);
   };
 
   // Calculate totals
@@ -106,6 +196,10 @@ const AdminHoursTab: React.FC = () => {
   const totalCost = filteredAdminHours.reduce((sum, h) => 
     sum + calculateHoursCost(h.staffId, h.adminHours, h.trainingHours), 0
   );
+
+  if (loading) {
+    return <div>Loading admin/training hours...</div>;
+  }
 
   return (
     <>

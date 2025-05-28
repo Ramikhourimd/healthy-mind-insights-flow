@@ -1,3 +1,4 @@
+
 // Types for the HealthyMind Clinic Financial Dashboard
 
 // Revenue Source types
@@ -102,6 +103,16 @@ export type FixedOverhead = {
   year: number;
 };
 
+// Admin/Training hours type
+export type AdminTrainingHours = {
+  id: string;
+  staffId: string;
+  adminHours: number;
+  trainingHours: number;
+  month: number;
+  year: number;
+};
+
 // Bonus calculation metrics
 export type BonusMetrics = {
   id: string;
@@ -142,6 +153,7 @@ export type FinancialSummary = {
   totalClinicalCosts: number;
   totalAdminCosts: number;
   totalFixedOverheads: number;
+  totalAdminTrainingCosts: number; // Add admin/training hours costs
   totalExpenses: number;
   grossProfit: number;
   operatingProfit: number;
