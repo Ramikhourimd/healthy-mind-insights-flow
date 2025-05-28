@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -30,7 +29,9 @@ const RevenuePage: React.FC = () => {
     deleteRevenueSource, 
     currentPeriod,
     isLoading,
-    clinicalSessions
+    clinicalSessions,
+    staffMembers,
+    getClinicRate
   } = useFinance();
   
   // Filter sources for current period
@@ -38,7 +39,7 @@ const RevenuePage: React.FC = () => {
     source => source.month === currentPeriod.month && source.year === currentPeriod.year
   );
   
-  // Calculate revenue from clinical sessions automatically
+  // Calculate revenue from clinical sessions automatically using database rates
   const calculateRevenueFromSessions = () => {
     const filteredSessions = clinicalSessions.filter(
       session => session.month === currentPeriod.month && session.year === currentPeriod.year
@@ -50,25 +51,17 @@ const RevenuePage: React.FC = () => {
     filteredSessions.forEach(session => {
       const sessionCount = Number(session.count) || 0;
       if (sessionCount > 0) {
-        // Calculate revenue per session based on clinic type and meeting type
-        let revenuePerSession = 0;
+        // Get staff member to determine role
+        const staffMember = staffMembers.find(staff => staff.id === session.staffId);
+        const staffRole = staffMember?.role || "Psychiatrist"; // Default to Psychiatrist
         
-        // Standard rates for different clinic types and meeting types
-        if (session.clinicType === "PRV") {
-          revenuePerSession = session.meetingType === "Intake" ? 500 : 300; // Private clinic rates
-        } else if (session.clinicType === "MCB" || session.clinicType === "MHS") {
-          revenuePerSession = session.meetingType === "Intake" ? 350 : 200; // HMO rates
-        } else if (session.clinicType === "MHN" || session.clinicType === "MHY") {
-          revenuePerSession = session.meetingType === "Intake" ? 300 : 180; // Mental health network rates
-        } else if (session.clinicType === "MSY" || session.clinicType === "SPC") {
-          revenuePerSession = session.meetingType === "Intake" ? 400 : 250; // Specialized clinic rates
-        } else {
-          revenuePerSession = session.meetingType === "Intake" ? 350 : 200; // Default rates
-        }
+        // Get rate from database
+        const rateRecord = getClinicRate(session.clinicType, session.meetingType, staffRole as any);
+        const revenuePerSession = rateRecord ? rateRecord.rate : 0;
 
         // Only count revenue for "Show" sessions (not no-shows)
         if (session.showStatus === "Show") {
-          const clinicName = `${session.clinicType} - ${session.meetingType}`;
+          const clinicName = `${session.clinicType} - ${session.meetingType} (${staffRole})`;
           if (!revenueByClinic[clinicName]) {
             revenueByClinic[clinicName] = { total: 0, sessions: 0, avgRate: revenuePerSession };
           }
@@ -204,7 +197,7 @@ const RevenuePage: React.FC = () => {
           <CardHeader>
             <CardTitle className="text-lg font-medium">Revenue from Clinical Sessions</CardTitle>
             <p className="text-sm text-muted-foreground">
-              Automatically calculated from clinical session data
+              Automatically calculated from clinical session data using database rates
             </p>
           </CardHeader>
           <CardContent>
