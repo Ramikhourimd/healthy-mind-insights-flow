@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { 
@@ -16,7 +17,8 @@ import {
   ShowStatus,
   ServiceType,
   StaffRole,
-  ClinicRate
+  ClinicRate,
+  AdminTrainingHours
 } from "@/types/finance";
 
 interface FinanceContextType {
@@ -58,6 +60,12 @@ interface FinanceContextType {
   addAdminStaff: (staffData: Omit<AdminStaffFinancials, "id">) => Promise<AdminStaffFinancials>;
   updateAdminStaff: (staffData: AdminStaffFinancials) => Promise<AdminStaffFinancials>;
   deleteAdminStaff: (id: string) => Promise<void>;
+  
+  // Admin Training Hours
+  adminTrainingHours: AdminTrainingHours[];
+  addAdminTrainingHours: (hoursData: Omit<AdminTrainingHours, "id">) => Promise<AdminTrainingHours>;
+  updateAdminTrainingHours: (hoursData: AdminTrainingHours) => Promise<AdminTrainingHours>;
+  deleteAdminTrainingHours: (id: string) => Promise<void>;
   
   // Time Period
   currentPeriod: TimePeriod;
