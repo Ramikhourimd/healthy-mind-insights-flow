@@ -1,10 +1,10 @@
-
 import React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useFinance } from "@/context/FinanceContext";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Plus } from "lucide-react";
+import { Plus, Trash2 } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 import ExcelImporter from "@/components/excel/ExcelImporter";
 
 const ClinicalStaffTab: React.FC = () => {
@@ -12,8 +12,11 @@ const ClinicalStaffTab: React.FC = () => {
     clinicalSessions, 
     staffMembers, 
     currentPeriod,
-    addClinicalSession
+    addClinicalSession,
+    deleteClinicalSession
   } = useFinance();
+
+  const { toast } = useToast();
 
   // Filter sessions for current period
   const filteredSessions = clinicalSessions.filter(
@@ -52,19 +55,65 @@ const ClinicalStaffTab: React.FC = () => {
           year: currentPeriod.year,
         });
       }
+      toast({
+        title: "Import Successful",
+        description: `Imported ${sessions.length} clinical sessions.`,
+      });
     } catch (error) {
       console.error("Error importing sessions:", error);
+      toast({
+        title: "Import Failed",
+        description: "There was an error importing the sessions.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Handle clear all data
+  const handleClearData = async () => {
+    if (!confirm(`Are you sure you want to clear all clinical sessions for ${new Date(currentPeriod.year, currentPeriod.month - 1).toLocaleString('default', { month: 'long' })} ${currentPeriod.year}? This action cannot be undone.`)) {
+      return;
+    }
+
+    try {
+      const deletePromises = filteredSessions.map(session => 
+        deleteClinicalSession(session.id)
+      );
+      
+      await Promise.all(deletePromises);
+      
+      toast({
+        title: "Data Cleared",
+        description: `Cleared ${filteredSessions.length} clinical sessions.`,
+      });
+    } catch (error) {
+      console.error("Error clearing sessions:", error);
+      toast({
+        title: "Clear Failed",
+        description: "There was an error clearing the sessions.",
+        variant: "destructive",
+      });
     }
   };
 
   return (
     <>
       <div className="flex justify-between mb-4">
-        <ExcelImporter 
-          staffMembers={staffMembers}
-          currentPeriod={currentPeriod}
-          onImport={handleImportSessions}
-        />
+        <div className="flex gap-2">
+          <ExcelImporter 
+            staffMembers={staffMembers}
+            currentPeriod={currentPeriod}
+            onImport={handleImportSessions}
+          />
+          {filteredSessions.length > 0 && (
+            <Button 
+              variant="destructive" 
+              onClick={handleClearData}
+            >
+              <Trash2 className="mr-2 h-4 w-4" /> Clear All Data
+            </Button>
+          )}
+        </div>
         <Button onClick={() => window.location.href = '/clinical-sessions'}>
           <Plus className="mr-2 h-4 w-4" /> Add Clinical Session
         </Button>
