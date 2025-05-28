@@ -1,10 +1,10 @@
-
 import React from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useFinance } from "@/context/FinanceContext";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from "recharts";
+import StaffPerformanceTab from "@/components/staff/StaffPerformanceTab";
 
 const ReportsPage: React.FC = () => {
   const { financialSummary } = useFinance();
@@ -113,19 +113,7 @@ const ReportsPage: React.FC = () => {
         </TabsContent>
 
         <TabsContent value="staff">
-          <Card className="shadow-sm">
-            <CardHeader>
-              <CardTitle className="text-lg font-medium">Staff Performance Metrics</CardTitle>
-              <CardDescription>Key performance indicators for clinical staff</CardDescription>
-            </CardHeader>
-            <CardContent className="flex flex-col items-center justify-center py-12">
-              <p className="text-center text-muted-foreground">
-                Staff performance reporting will be available in the complete version.
-                <br />
-                This will include CSAT scores, no-show rates, and billable service hours.
-              </p>
-            </CardContent>
-          </Card>
+          <StaffPerformanceTab />
         </TabsContent>
       </Tabs>
     </div>

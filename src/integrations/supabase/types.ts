@@ -707,6 +707,47 @@ export type Database = {
         }
         Relationships: []
       }
+      staff_performance_metrics: {
+        Row: {
+          available_hours: number
+          created_at: string
+          id: string
+          month: number
+          satisfaction_score: number | null
+          staff_id: string
+          updated_at: string
+          year: number
+        }
+        Insert: {
+          available_hours?: number
+          created_at?: string
+          id?: string
+          month: number
+          satisfaction_score?: number | null
+          staff_id: string
+          updated_at?: string
+          year: number
+        }
+        Update: {
+          available_hours?: number
+          created_at?: string
+          id?: string
+          month?: number
+          satisfaction_score?: number | null
+          staff_id?: string
+          updated_at?: string
+          year?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "staff_performance_metrics_staff_id_fkey"
+            columns: ["staff_id"]
+            isOneToOne: false
+            referencedRelation: "staff_members"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_roles: {
         Row: {
           created_at: string | null
@@ -733,6 +774,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      calculate_staff_no_show_rate: {
+        Args: { p_staff_id: string; p_month: number; p_year: number }
+        Returns: number
+      }
       has_role: {
         Args: { role: Database["public"]["Enums"]["app_role"] }
         Returns: boolean

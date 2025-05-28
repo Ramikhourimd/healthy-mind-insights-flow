@@ -1,4 +1,3 @@
-
 // Types for the HealthyMind Clinic Financial Dashboard
 
 // Revenue Source types
@@ -122,6 +121,17 @@ export type BonusMetrics = {
   csatScore: number;
   noShowRate: number;
   billableServiceHours: number;
+};
+
+// Staff performance metrics type - updated to match database
+export type StaffPerformanceMetrics = {
+  id: string;
+  staffId: string;
+  month: number;
+  year: number;
+  satisfactionScore?: number; // 0-100 scale
+  availableHours: number; // Bank hours
+  noShowRate?: number; // Calculated automatically
 };
 
 // Settings and assumptions
