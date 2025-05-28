@@ -20,8 +20,7 @@ const AdminHoursTab: React.FC = () => {
   const { 
     staffMembers, 
     currentPeriod,
-    clinicalStaffRates,
-    getStaffRates
+    clinicalStaffRates
   } = useFinance();
 
   const [adminHours, setAdminHours] = useState<AdminHour[]>([]);
@@ -49,9 +48,14 @@ const AdminHoursTab: React.FC = () => {
     return staff ? staff.name : "Unknown Staff";
   };
 
+  // Get staff rates synchronously from the existing rates array
+  const getStaffRatesSync = (staffId: string) => {
+    return clinicalStaffRates.find(rate => rate.staffId === staffId);
+  };
+
   // Calculate cost for admin/training hours
   const calculateHoursCost = (staffId: string, adminHours: number, trainingHours: number) => {
-    const rates = getStaffRates(staffId);
+    const rates = getStaffRatesSync(staffId);
     if (!rates) return 0;
     
     const adminCost = adminHours * (rates.admin_rate || 0);
