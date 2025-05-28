@@ -29,13 +29,79 @@ const RevenuePage: React.FC = () => {
     updateRevenueSource, 
     deleteRevenueSource, 
     currentPeriod,
-    isLoading 
+    isLoading,
+    clinicalSessions
   } = useFinance();
   
   // Filter sources for current period
   const filteredSources = revenueSources.filter(
     source => source.month === currentPeriod.month && source.year === currentPeriod.year
   );
+  
+  // Calculate revenue from clinical sessions automatically
+  const calculateRevenueFromSessions = () => {
+    const filteredSessions = clinicalSessions.filter(
+      session => session.month === currentPeriod.month && session.year === currentPeriod.year
+    );
+
+    // Group sessions by clinic type to create revenue sources
+    const revenueByClinic: { [key: string]: { total: number; sessions: number; avgRate: number } } = {};
+    
+    filteredSessions.forEach(session => {
+      const sessionCount = Number(session.count) || 0;
+      if (sessionCount > 0) {
+        // Calculate revenue per session based on clinic type and meeting type
+        let revenuePerSession = 0;
+        
+        // Standard rates for different clinic types and meeting types
+        if (session.clinicType === "PRV") {
+          revenuePerSession = session.meetingType === "Intake" ? 500 : 300; // Private clinic rates
+        } else if (session.clinicType === "MCB" || session.clinicType === "MHS") {
+          revenuePerSession = session.meetingType === "Intake" ? 350 : 200; // HMO rates
+        } else if (session.clinicType === "MHN" || session.clinicType === "MHY") {
+          revenuePerSession = session.meetingType === "Intake" ? 300 : 180; // Mental health network rates
+        } else if (session.clinicType === "MSY" || session.clinicType === "SPC") {
+          revenuePerSession = session.meetingType === "Intake" ? 400 : 250; // Specialized clinic rates
+        } else {
+          revenuePerSession = session.meetingType === "Intake" ? 350 : 200; // Default rates
+        }
+
+        // Only count revenue for "Show" sessions (not no-shows)
+        if (session.showStatus === "Show") {
+          const clinicName = `${session.clinicType} - ${session.meetingType}`;
+          if (!revenueByClinic[clinicName]) {
+            revenueByClinic[clinicName] = { total: 0, sessions: 0, avgRate: revenuePerSession };
+          }
+          revenueByClinic[clinicName].total += revenuePerSession * sessionCount;
+          revenueByClinic[clinicName].sessions += sessionCount;
+        }
+      }
+    });
+
+    return Object.entries(revenueByClinic).map(([name, data]) => ({
+      name,
+      quantity: data.sessions,
+      ratePerUnit: data.avgRate,
+      total: data.total,
+      isAutoCalculated: true
+    }));
+  };
+
+  // Get auto-calculated revenue from sessions
+  const autoRevenueData = calculateRevenueFromSessions();
+
+  // Combine manual and auto revenue for totals
+  const manualRevenue = filteredSources.reduce(
+    (sum, source) => sum + source.quantity * source.ratePerUnit, 
+    0
+  );
+  
+  const autoRevenue = autoRevenueData.reduce(
+    (sum, source) => sum + source.total,
+    0
+  );
+  
+  const totalRevenue = manualRevenue + autoRevenue;
   
   // State for the form
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -48,12 +114,6 @@ const RevenuePage: React.FC = () => {
     month: currentPeriod.month,
     year: currentPeriod.year,
   });
-
-  // Calculate total revenue
-  const totalRevenue = filteredSources.reduce(
-    (sum, source) => sum + source.quantity * source.ratePerUnit, 
-    0
-  );
 
   // Format currency
   const formatCurrency = (amount: number) => {
@@ -130,17 +190,59 @@ const RevenuePage: React.FC = () => {
         <div>
           <h1 className="text-3xl font-bold text-gray-800">Revenue Management</h1>
           <p className="text-gray-500 mt-1">
-            Manage revenue sources for {new Date(currentPeriod.year, currentPeriod.month - 1).toLocaleString('default', { month: 'long' })} {currentPeriod.year}
+            Complete revenue breakdown for {new Date(currentPeriod.year, currentPeriod.month - 1).toLocaleString('default', { month: 'long' })} {currentPeriod.year}
           </p>
         </div>
         <Button onClick={handleAddNew}>
-          <Plus className="mr-2 h-4 w-4" /> Add Revenue Source
+          <Plus className="mr-2 h-4 w-4" /> Add Manual Revenue Source
         </Button>
       </div>
 
+      {/* Auto-calculated Revenue from Clinical Sessions */}
+      {autoRevenueData.length > 0 && (
+        <Card className="shadow-sm mb-6">
+          <CardHeader>
+            <CardTitle className="text-lg font-medium">Revenue from Clinical Sessions</CardTitle>
+            <p className="text-sm text-muted-foreground">
+              Automatically calculated from clinical session data
+            </p>
+          </CardHeader>
+          <CardContent>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Source Name</TableHead>
+                  <TableHead className="text-right">Sessions</TableHead>
+                  <TableHead className="text-right">Rate Per Session</TableHead>
+                  <TableHead className="text-right">Total Revenue</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {autoRevenueData.map((source, index) => (
+                  <TableRow key={`auto-${index}`}>
+                    <TableCell>{source.name}</TableCell>
+                    <TableCell className="text-right">{source.quantity}</TableCell>
+                    <TableCell className="text-right">{formatCurrency(source.ratePerUnit)}</TableCell>
+                    <TableCell className="text-right">{formatCurrency(source.total)}</TableCell>
+                  </TableRow>
+                ))}
+                <TableRow className="border-t-2">
+                  <TableCell colSpan={3} className="font-semibold">Subtotal - Clinical Sessions</TableCell>
+                  <TableCell className="text-right font-semibold">{formatCurrency(autoRevenue)}</TableCell>
+                </TableRow>
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Manual Revenue Sources */}
       <Card className="shadow-sm mb-6">
         <CardHeader>
-          <CardTitle className="text-lg font-medium">Revenue Sources</CardTitle>
+          <CardTitle className="text-lg font-medium">Manual Revenue Sources</CardTitle>
+          <p className="text-sm text-muted-foreground">
+            Manually entered revenue sources
+          </p>
         </CardHeader>
         <CardContent>
           {isLoading ? (
@@ -163,7 +265,7 @@ const RevenuePage: React.FC = () => {
                 {filteredSources.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
-                      No revenue sources found for this period. Click "Add Revenue Source" to get started.
+                      No manual revenue sources found for this period. Click "Add Manual Revenue Source" to get started.
                     </TableCell>
                   </TableRow>
                 ) : (
@@ -186,11 +288,13 @@ const RevenuePage: React.FC = () => {
                         </TableCell>
                       </TableRow>
                     ))}
-                    <TableRow>
-                      <TableCell colSpan={3} className="font-bold">Total Revenue</TableCell>
-                      <TableCell className="text-right font-bold">{formatCurrency(totalRevenue)}</TableCell>
-                      <TableCell></TableCell>
-                    </TableRow>
+                    {filteredSources.length > 0 && (
+                      <TableRow className="border-t-2">
+                        <TableCell colSpan={3} className="font-semibold">Subtotal - Manual Sources</TableCell>
+                        <TableCell className="text-right font-semibold">{formatCurrency(manualRevenue)}</TableCell>
+                        <TableCell></TableCell>
+                      </TableRow>
+                    )}
                   </>
                 )}
               </TableBody>
@@ -199,10 +303,30 @@ const RevenuePage: React.FC = () => {
         </CardContent>
       </Card>
 
+      {/* Total Revenue Summary */}
+      <Card className="shadow-sm">
+        <CardContent className="pt-6">
+          <div className="flex justify-between items-center text-xl font-bold">
+            <span>Total Revenue for {new Date(currentPeriod.year, currentPeriod.month - 1).toLocaleString('default', { month: 'long' })} {currentPeriod.year}</span>
+            <span className="text-green-600">{formatCurrency(totalRevenue)}</span>
+          </div>
+          <div className="mt-2 text-sm text-muted-foreground">
+            <div className="flex justify-between">
+              <span>Clinical Sessions:</span>
+              <span>{formatCurrency(autoRevenue)}</span>
+            </div>
+            <div className="flex justify-between">
+              <span>Manual Sources:</span>
+              <span>{formatCurrency(manualRevenue)}</span>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>{isEditing ? "Edit Revenue Source" : "Add Revenue Source"}</DialogTitle>
+            <DialogTitle>{isEditing ? "Edit Revenue Source" : "Add Manual Revenue Source"}</DialogTitle>
           </DialogHeader>
           <form onSubmit={handleSubmit}>
             <div className="space-y-4 py-2">
