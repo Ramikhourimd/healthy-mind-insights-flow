@@ -15,7 +15,8 @@ import {
   MeetingType,
   ShowStatus,
   ServiceType,
-  StaffRole
+  StaffRole,
+  ClinicRate
 } from "@/types/finance";
 
 interface FinanceContextType {
@@ -70,6 +71,14 @@ interface FinanceContextType {
   settings: FinancialSettings;
   updateSettings: (settings: FinancialSettings) => Promise<FinancialSettings>;
   
+  // Clinic Rates Management
+  clinicRates: ClinicRate[];
+  fetchClinicRates: () => Promise<ClinicRate[]>;
+  addClinicRate: (rateData: Omit<ClinicRate, "id">) => Promise<ClinicRate>;
+  updateClinicRate: (rateData: ClinicRate) => Promise<ClinicRate>;
+  deleteClinicRate: (id: string) => Promise<void>;
+  getClinicRate: (clinicType: ClinicType, meetingType: MeetingType, staffRole: StaffRole) => ClinicRate | null;
+  
   // Loading state
   isLoading: boolean;
 }
@@ -114,6 +123,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     ]
   });
   const [isLoading, setIsLoading] = useState(false);
+  const [clinicRates, setClinicRates] = useState<ClinicRate[]>([]);
 
   // Fetch clinical sessions data from Supabase
   const fetchClinicalSessions = async (): Promise<ClinicalSession[]> => {
@@ -1030,6 +1040,133 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }
   };
 
+  // Fetch clinic rates
+  const fetchClinicRates = async (): Promise<ClinicRate[]> => {
+    try {
+      const { data, error } = await supabase
+        .from('clinic_rates')
+        .select('*')
+        .order('clinic_type')
+        .order('meeting_type')
+        .order('staff_role');
+
+      if (error) throw error;
+
+      const transformedRates: ClinicRate[] = data.map((row) => ({
+        id: row.id,
+        clinicType: row.clinic_type as ClinicType,
+        meetingType: row.meeting_type as MeetingType,
+        staffRole: row.staff_role as StaffRole,
+        rate: row.rate,
+        createdAt: row.created_at,
+        updatedAt: row.updated_at,
+      }));
+
+      setClinicRates(transformedRates);
+      return transformedRates;
+    } catch (error) {
+      console.error('Failed to fetch clinic rates:', error);
+      return [];
+    }
+  };
+
+  // Add clinic rate
+  const addClinicRate = async (rateData: Omit<ClinicRate, "id">): Promise<ClinicRate> => {
+    try {
+      const { data, error } = await supabase
+        .from('clinic_rates')
+        .insert([{
+          clinic_type: rateData.clinicType,
+          meeting_type: rateData.meetingType,
+          staff_role: rateData.staffRole,
+          rate: rateData.rate,
+        }])
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      const newRate: ClinicRate = {
+        id: data.id,
+        clinicType: data.clinic_type as ClinicType,
+        meetingType: data.meeting_type as MeetingType,
+        staffRole: data.staff_role as StaffRole,
+        rate: data.rate,
+        createdAt: data.created_at,
+        updatedAt: data.updated_at,
+      };
+
+      setClinicRates(prev => [...prev, newRate]);
+      return newRate;
+    } catch (error) {
+      console.error('Failed to add clinic rate:', error);
+      throw error;
+    }
+  };
+
+  // Update clinic rate
+  const updateClinicRate = async (rateData: ClinicRate): Promise<ClinicRate> => {
+    try {
+      const { data, error } = await supabase
+        .from('clinic_rates')
+        .update({
+          clinic_type: rateData.clinicType,
+          meeting_type: rateData.meetingType,
+          staff_role: rateData.staffRole,
+          rate: rateData.rate,
+        })
+        .eq('id', rateData.id)
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      const updatedRate: ClinicRate = {
+        id: data.id,
+        clinicType: data.clinic_type as ClinicType,
+        meetingType: data.meeting_type as MeetingType,
+        staffRole: data.staff_role as StaffRole,
+        rate: data.rate,
+        createdAt: data.created_at,
+        updatedAt: data.updated_at,
+      };
+
+      setClinicRates(prev => prev.map(rate => 
+        rate.id === rateData.id ? updatedRate : rate
+      ));
+      return updatedRate;
+    } catch (error) {
+      console.error('Failed to update clinic rate:', error);
+      throw error;
+    }
+  };
+
+  // Delete clinic rate
+  const deleteClinicRate = async (id: string): Promise<void> => {
+    try {
+      const { error } = await supabase
+        .from('clinic_rates')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+
+      setClinicRates(prev => prev.filter(rate => rate.id !== id));
+    } catch (error) {
+      console.error('Failed to delete clinic rate:', error);
+      throw error;
+    }
+  };
+
+  // Get specific clinic rate
+  const getClinicRate = (clinicType: ClinicType, meetingType: MeetingType, staffRole: StaffRole): ClinicRate | null => {
+    return clinicRates.find(rate => 
+      rate.clinicType === clinicType && 
+      rate.meetingType === meetingType && 
+      rate.staffRole === staffRole
+    ) || null;
+  };
+
   // Calculate revenue from clinical sessions automatically
   const calculateRevenueFromSessions = () => {
     const filteredSessions = clinicalSessions.filter(
@@ -1037,50 +1174,38 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     );
 
     // Group sessions by clinic type to create revenue sources
-    const revenueByClinic: { [key: string]: number } = {};
+    const revenueByClinic: { [key: string]: { total: number; sessions: number; avgRate: number } } = {};
     
     filteredSessions.forEach(session => {
       const sessionCount = Number(session.count) || 0;
       if (sessionCount > 0) {
-        // Calculate revenue per session based on clinic type and meeting type
-        let revenuePerSession = 0;
+        // Get staff member to determine role
+        const staffMember = staffMembers.find(staff => staff.id === session.staffId);
+        const staffRole = staffMember?.role || "Psychiatrist"; // Default to Psychiatrist
         
-        // Standard rates for different clinic types and meeting types
-        if (session.clinicType === "PRV") {
-          revenuePerSession = session.meetingType === "Intake" ? 500 : 300; // Private clinic rates
-        } else if (session.clinicType === "MCB" || session.clinicType === "MHS") {
-          revenuePerSession = session.meetingType === "Intake" ? 350 : 200; // HMO rates
-        } else if (session.clinicType === "MHN" || session.clinicType === "MHY") {
-          revenuePerSession = session.meetingType === "Intake" ? 300 : 180; // Mental health network rates
-        } else if (session.clinicType === "MSY" || session.clinicType === "SPC") {
-          revenuePerSession = session.meetingType === "Intake" ? 400 : 250; // Specialized clinic rates
-        } else {
-          revenuePerSession = session.meetingType === "Intake" ? 350 : 200; // Default rates
-        }
+        // Get rate from database
+        const rateRecord = getClinicRate(session.clinicType, session.meetingType, staffRole as StaffRole);
+        const revenuePerSession = rateRecord ? rateRecord.rate : 0;
 
         // Only count revenue for "Show" sessions (not no-shows)
         if (session.showStatus === "Show") {
-          const clinicName = `${session.clinicType} - ${session.meetingType}`;
+          const clinicName = `${session.clinicType} - ${session.meetingType} (${staffRole})`;
           if (!revenueByClinic[clinicName]) {
-            revenueByClinic[clinicName] = 0;
+            revenueByClinic[clinicName] = { total: 0, sessions: 0, avgRate: revenuePerSession };
           }
-          revenueByClinic[clinicName] += revenuePerSession * sessionCount;
+          revenueByClinic[clinicName].total += revenuePerSession * sessionCount;
+          revenueByClinic[clinicName].sessions += sessionCount;
         }
       }
     });
 
-    // Convert to revenue source format
-    const autoCalculatedRevenue: RevenueSource[] = Object.entries(revenueByClinic).map(([name, total]) => ({
-      id: `auto-${name.replace(/\s+/g, '-').toLowerCase()}`,
+    return Object.entries(revenueByClinic).map(([name, data]) => ({
       name,
-      quantity: 1,
-      ratePerUnit: total,
-      month: currentPeriod.month,
-      year: currentPeriod.year,
+      quantity: data.sessions,
+      ratePerUnit: data.avgRate,
+      total: data.total,
+      isAutoCalculated: true
     }));
-
-    console.log('Auto-calculated revenue from sessions:', autoCalculatedRevenue);
-    return autoCalculatedRevenue;
   };
 
   // Update financial summary function
@@ -1182,14 +1307,15 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     setFinancialSummary(summary);
   };
 
-  // Effects to fetch data on mount
+  // Effects to fetch data on mount - add clinic rates
   useEffect(() => {
     fetchClinicalSessions();
     fetchRevenueSources();
     fetchStaffMembers();
-    fetchClinicalStaffRates(); // Add this to fetch rates on mount
+    fetchClinicalStaffRates();
     fetchFixedOverheads();
     fetchAdminStaffFinancials();
+    fetchClinicRates(); // Add this line
   }, []);
 
   useEffect(() => {
@@ -1245,6 +1371,12 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     settings,
     updateSettings,
     isLoading,
+    clinicRates,
+    fetchClinicRates,
+    addClinicRate,
+    updateClinicRate,
+    deleteClinicRate,
+    getClinicRate,
   };
 
   return (

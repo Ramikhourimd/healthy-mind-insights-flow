@@ -93,6 +93,36 @@ export type Database = {
         }
         Relationships: []
       }
+      clinic_rates: {
+        Row: {
+          clinic_type: string
+          created_at: string
+          id: string
+          meeting_type: string
+          rate: number
+          staff_role: string
+          updated_at: string
+        }
+        Insert: {
+          clinic_type: string
+          created_at?: string
+          id?: string
+          meeting_type: string
+          rate?: number
+          staff_role: string
+          updated_at?: string
+        }
+        Update: {
+          clinic_type?: string
+          created_at?: string
+          id?: string
+          meeting_type?: string
+          rate?: number
+          staff_role?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       clinical_sessions: {
         Row: {
           clinic_type: string

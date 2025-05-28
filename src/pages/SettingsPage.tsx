@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -9,6 +8,7 @@ import { Separator } from "@/components/ui/separator";
 import { useFinance } from "@/context/FinanceContext";
 import { toast } from "sonner";
 import { FinancialSettings } from "@/types/finance";
+import ClinicRatesTab from "@/components/settings/ClinicRatesTab";
 
 const SettingsPage: React.FC = () => {
   const { settings, updateSettings } = useFinance();
@@ -64,6 +64,7 @@ const SettingsPage: React.FC = () => {
           <TabsTrigger value="general">General Settings</TabsTrigger>
           <TabsTrigger value="bonus">Bonus Calculation</TabsTrigger>
           <TabsTrigger value="rates">Standard Rates</TabsTrigger>
+          <TabsTrigger value="clinic-rates">Clinic Rates</TabsTrigger>
         </TabsList>
 
         <TabsContent value="general">
@@ -286,6 +287,10 @@ const SettingsPage: React.FC = () => {
               </p>
             </CardContent>
           </Card>
+        </TabsContent>
+
+        <TabsContent value="clinic-rates">
+          <ClinicRatesTab />
         </TabsContent>
       </Tabs>
     </div>

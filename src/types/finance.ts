@@ -1,4 +1,3 @@
-
 // Types for the HealthyMind Clinic Financial Dashboard
 
 // Revenue Source types
@@ -156,4 +155,15 @@ export type FinancialSummary = {
 export type TimePeriod = {
   month: number;
   year: number;
+};
+
+// Add new clinic rates type
+export type ClinicRate = {
+  id: string;
+  clinicType: ClinicType;
+  meetingType: MeetingType;
+  staffRole: StaffRole;
+  rate: number;
+  createdAt?: string;
+  updatedAt?: string;
 };
