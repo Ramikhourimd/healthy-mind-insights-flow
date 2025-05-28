@@ -353,6 +353,30 @@ export type Database = {
           },
         ]
       }
+      cm_average_scores: {
+        Row: {
+          average_cm1_score: number
+          cm_name: string
+          created_at: string | null
+          last_updated: string | null
+          number_of_reviews: number
+        }
+        Insert: {
+          average_cm1_score: number
+          cm_name: string
+          created_at?: string | null
+          last_updated?: string | null
+          number_of_reviews?: number
+        }
+        Update: {
+          average_cm1_score?: number
+          cm_name?: string
+          created_at?: string | null
+          last_updated?: string | null
+          number_of_reviews?: number
+        }
+        Relationships: []
+      }
       course_registrations: {
         Row: {
           comments: string | null
@@ -383,6 +407,30 @@ export type Database = {
           phone?: string
           specialization?: string | null
           workplace?: string | null
+        }
+        Relationships: []
+      }
+      doctor_average_scores: {
+        Row: {
+          average_psy_score: number
+          created_at: string | null
+          doctor_name: string
+          last_updated: string | null
+          number_of_reviews: number
+        }
+        Insert: {
+          average_psy_score: number
+          created_at?: string | null
+          doctor_name: string
+          last_updated?: string | null
+          number_of_reviews?: number
+        }
+        Update: {
+          average_psy_score?: number
+          created_at?: string | null
+          doctor_name?: string
+          last_updated?: string | null
+          number_of_reviews?: number
         }
         Relationships: []
       }
@@ -641,6 +689,57 @@ export type Database = {
         }
         Relationships: []
       }
+      raw_satisfaction_data: {
+        Row: {
+          cm: string | null
+          cm_1: number | null
+          comment: string | null
+          created_at: string | null
+          doctor: string | null
+          first_name: string | null
+          id_serial: string
+          last_name: string | null
+          phone: string | null
+          psy: number | null
+          psy_wait: number | null
+          recommand: number | null
+          start_time: string | null
+          upload_date: string | null
+        }
+        Insert: {
+          cm?: string | null
+          cm_1?: number | null
+          comment?: string | null
+          created_at?: string | null
+          doctor?: string | null
+          first_name?: string | null
+          id_serial: string
+          last_name?: string | null
+          phone?: string | null
+          psy?: number | null
+          psy_wait?: number | null
+          recommand?: number | null
+          start_time?: string | null
+          upload_date?: string | null
+        }
+        Update: {
+          cm?: string | null
+          cm_1?: number | null
+          comment?: string | null
+          created_at?: string | null
+          doctor?: string | null
+          first_name?: string | null
+          id_serial?: string
+          last_name?: string | null
+          phone?: string | null
+          psy?: number | null
+          psy_wait?: number | null
+          recommand?: number | null
+          start_time?: string | null
+          upload_date?: string | null
+        }
+        Relationships: []
+      }
       revenue_sources: {
         Row: {
           created_at: string
@@ -774,6 +873,14 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      calculate_cm_averages: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
+      calculate_doctor_averages: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
       calculate_staff_no_show_rate: {
         Args: { p_staff_id: string; p_month: number; p_year: number }
         Returns: number

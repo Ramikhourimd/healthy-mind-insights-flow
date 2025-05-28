@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -6,11 +5,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useFinance } from "@/context/FinanceContext";
 import { StaffPerformanceMetrics } from "@/types/finance";
 import { Pencil, Plus } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import SatisfactionScoreTab from "./SatisfactionScoreTab";
 
 const StaffPerformanceTab: React.FC = () => {
   const { staffMembers, currentPeriod } = useFinance();
@@ -186,151 +187,162 @@ const StaffPerformanceTab: React.FC = () => {
   const clinicalStaff = staffMembers.filter(s => s.role === "Psychiatrist" || s.role === "CaseManager");
 
   return (
-    <>
-      <div className="flex justify-between mb-4">
-        <div>
-          <h3 className="text-lg font-medium">Staff Performance Metrics</h3>
-          <p className="text-sm text-muted-foreground">
-            Track satisfaction scores, available hours, and no-show rates for {new Date(currentPeriod.year, currentPeriod.month - 1).toLocaleString('default', { month: 'long' })} {currentPeriod.year}
-          </p>
+    <Tabs defaultValue="performance" className="w-full">
+      <TabsList className="grid w-full grid-cols-2">
+        <TabsTrigger value="performance">Performance Metrics</TabsTrigger>
+        <TabsTrigger value="satisfaction">Satisfaction Scores</TabsTrigger>
+      </TabsList>
+      
+      <TabsContent value="performance" className="space-y-4">
+        <div className="flex justify-between mb-4">
+          <div>
+            <h3 className="text-lg font-medium">Staff Performance Metrics</h3>
+            <p className="text-sm text-muted-foreground">
+              Track satisfaction scores, available hours, and no-show rates for {new Date(currentPeriod.year, currentPeriod.month - 1).toLocaleString('default', { month: 'long' })} {currentPeriod.year}
+            </p>
+          </div>
+          <Button onClick={() => handleAddMetrics()}>
+            <Plus className="mr-2 h-4 w-4" /> Add Metrics
+          </Button>
         </div>
-        <Button onClick={() => handleAddMetrics()}>
-          <Plus className="mr-2 h-4 w-4" /> Add Metrics
-        </Button>
-      </div>
 
-      <Card className="shadow-sm">
-        <CardHeader>
-          <CardTitle className="text-lg font-medium">Performance Overview</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Staff Member</TableHead>
-                <TableHead className="text-right">Satisfaction Score (%)</TableHead>
-                <TableHead className="text-right">Available Hours</TableHead>
-                <TableHead className="text-right">No-Show Rate (%)</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {clinicalStaff.length > 0 ? (
-                clinicalStaff.map((staff) => {
-                  const metrics = getMetricsForStaff(staff.id);
-                  const noShowRate = noShowRates[staff.id];
-                  
-                  return (
-                    <TableRow key={staff.id}>
-                      <TableCell>{staff.name}</TableCell>
-                      <TableCell className="text-right">
-                        {metrics?.satisfactionScore !== undefined ? `${metrics.satisfactionScore}%` : "Not set"}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        {metrics ? metrics.availableHours : "Not set"}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        {noShowRate !== undefined ? `${noShowRate}%` : "Calculating..."}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        {metrics ? (
-                          <Button variant="ghost" size="icon" onClick={() => handleEditMetrics(metrics)}>
-                            <Pencil className="h-4 w-4" />
-                          </Button>
-                        ) : (
-                          <Button variant="outline" size="sm" onClick={() => handleAddMetrics(staff.id)}>
-                            Add Metrics
-                          </Button>
-                        )}
-                      </TableCell>
-                    </TableRow>
-                  );
-                })
-              ) : (
+        <Card className="shadow-sm">
+          <CardHeader>
+            <CardTitle className="text-lg font-medium">Performance Overview</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Table>
+              <TableHeader>
                 <TableRow>
-                  <TableCell colSpan={5} className="text-center py-4">No clinical staff members found</TableCell>
+                  <TableHead>Staff Member</TableHead>
+                  <TableHead className="text-right">Satisfaction Score (%)</TableHead>
+                  <TableHead className="text-right">Available Hours</TableHead>
+                  <TableHead className="text-right">No-Show Rate (%)</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
-              )}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
+              </TableHeader>
+              <TableBody>
+                {clinicalStaff.length > 0 ? (
+                  clinicalStaff.map((staff) => {
+                    const metrics = getMetricsForStaff(staff.id);
+                    const noShowRate = noShowRates[staff.id];
+                    
+                    return (
+                      <TableRow key={staff.id}>
+                        <TableCell>{staff.name}</TableCell>
+                        <TableCell className="text-right">
+                          {metrics?.satisfactionScore !== undefined ? `${metrics.satisfactionScore}%` : "Not set"}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          {metrics ? metrics.availableHours : "Not set"}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          {noShowRate !== undefined ? `${noShowRate}%` : "Calculating..."}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          {metrics ? (
+                            <Button variant="ghost" size="icon" onClick={() => handleEditMetrics(metrics)}>
+                              <Pencil className="h-4 w-4" />
+                            </Button>
+                          ) : (
+                            <Button variant="outline" size="sm" onClick={() => handleAddMetrics(staff.id)}>
+                              Add Metrics
+                            </Button>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })
+                ) : (
+                  <TableRow>
+                    <TableCell colSpan={5} className="text-center py-4">No clinical staff members found</TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
 
-      {/* Dialog for adding/editing metrics */}
-      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>{isEditing ? "Edit Performance Metrics" : "Add Performance Metrics"}</DialogTitle>
-          </DialogHeader>
-          <form onSubmit={handleSubmit}>
-            <div className="space-y-4 py-2">
-              <div className="grid w-full items-center gap-2">
-                <Label htmlFor="staffId">Staff Member</Label>
-                <select
-                  id="staffId"
-                  value={currentMetrics.staffId}
-                  onChange={(e) => setCurrentMetrics({ ...currentMetrics, staffId: e.target.value })}
-                  className="w-full p-2 border border-gray-300 rounded-md"
-                  required
-                  disabled={isEditing}
-                >
-                  <option value="">Select Staff Member</option>
-                  {clinicalStaff.map((staff) => (
-                    <option key={staff.id} value={staff.id}>
-                      {staff.name} ({staff.role})
-                    </option>
-                  ))}
-                </select>
-              </div>
-              
-              <div className="grid w-full items-center gap-2">
-                <Label htmlFor="satisfactionScore">Satisfaction Score (0-100%)</Label>
-                <Input
-                  id="satisfactionScore"
-                  type="number"
-                  min="0"
-                  max="100"
-                  value={currentMetrics.satisfactionScore || ""}
-                  onChange={(e) => setCurrentMetrics({ 
-                    ...currentMetrics, 
-                    satisfactionScore: e.target.value ? Number(e.target.value) : undefined 
-                  })}
-                  placeholder="Enter satisfaction score"
-                />
-              </div>
+        {/* Dialog for adding/editing metrics */}
+        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>{isEditing ? "Edit Performance Metrics" : "Add Performance Metrics"}</DialogTitle>
+            </DialogHeader>
+            <form onSubmit={handleSubmit}>
+              <div className="space-y-4 py-2">
+                <div className="grid w-full items-center gap-2">
+                  <Label htmlFor="staffId">Staff Member</Label>
+                  <select
+                    id="staffId"
+                    value={currentMetrics.staffId}
+                    onChange={(e) => setCurrentMetrics({ ...currentMetrics, staffId: e.target.value })}
+                    className="w-full p-2 border border-gray-300 rounded-md"
+                    required
+                    disabled={isEditing}
+                  >
+                    <option value="">Select Staff Member</option>
+                    {clinicalStaff.map((staff) => (
+                      <option key={staff.id} value={staff.id}>
+                        {staff.name} ({staff.role})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                
+                <div className="grid w-full items-center gap-2">
+                  <Label htmlFor="satisfactionScore">Satisfaction Score (0-100%)</Label>
+                  <Input
+                    id="satisfactionScore"
+                    type="number"
+                    min="0"
+                    max="100"
+                    value={currentMetrics.satisfactionScore || ""}
+                    onChange={(e) => setCurrentMetrics({ 
+                      ...currentMetrics, 
+                      satisfactionScore: e.target.value ? Number(e.target.value) : undefined 
+                    })}
+                    placeholder="Enter satisfaction score"
+                  />
+                </div>
 
-              <div className="grid w-full items-center gap-2">
-                <Label htmlFor="availableHours">Available Hours (Bank Hours)</Label>
-                <Input
-                  id="availableHours"
-                  type="number"
-                  min="0"
-                  step="0.1"
-                  value={currentMetrics.availableHours}
-                  onChange={(e) => setCurrentMetrics({ 
-                    ...currentMetrics, 
-                    availableHours: Number(e.target.value) || 0 
-                  })}
-                  required
-                />
-              </div>
+                <div className="grid w-full items-center gap-2">
+                  <Label htmlFor="availableHours">Available Hours (Bank Hours)</Label>
+                  <Input
+                    id="availableHours"
+                    type="number"
+                    min="0"
+                    step="0.1"
+                    value={currentMetrics.availableHours}
+                    onChange={(e) => setCurrentMetrics({ 
+                      ...currentMetrics, 
+                      availableHours: Number(e.target.value) || 0 
+                    })}
+                    required
+                  />
+                </div>
 
-              <div className="text-sm text-muted-foreground">
-                <strong>Note:</strong> No-show rate is calculated automatically based on clinical session data.
+                <div className="text-sm text-muted-foreground">
+                  <strong>Note:</strong> No-show rate is calculated automatically based on clinical session data.
+                </div>
               </div>
-            </div>
-            <DialogFooter className="mt-4">
-              <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
-                Cancel
-              </Button>
-              <Button type="submit" disabled={isLoading}>
-                {isLoading ? "Saving..." : (isEditing ? "Update" : "Add")}
-              </Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
-    </>
+              <DialogFooter className="mt-4">
+                <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
+                  Cancel
+                </Button>
+                <Button type="submit" disabled={isLoading}>
+                  {isLoading ? "Saving..." : (isEditing ? "Update" : "Add")}
+                </Button>
+              </DialogFooter>
+            </form>
+          </DialogContent>
+        </Dialog>
+      </TabsContent>
+
+      <TabsContent value="satisfaction">
+        <SatisfactionScoreTab />
+      </TabsContent>
+    </Tabs>
   );
 };
 
