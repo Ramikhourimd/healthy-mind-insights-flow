@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useFinance } from "@/context/FinanceContext";
@@ -8,6 +9,7 @@ import { ExpenseSummaryCard } from "@/components/expenses/ExpenseSummaryCard";
 import { FixedOverheadsTab } from "@/components/expenses/FixedOverheadsTab";
 import { AdminStaffTab } from "@/components/expenses/AdminStaffTab";
 import ClinicalStaffTab from "@/components/expenses/ClinicalStaffTab";
+import AdminHoursTab from "@/components/expenses/AdminHoursTab";
 import { OverheadDialog } from "@/components/expenses/dialogs/OverheadDialog";
 import { AdminStaffDialog } from "@/components/expenses/dialogs/AdminStaffDialog";
 
@@ -224,6 +226,7 @@ const ExpensesPage: React.FC = () => {
           <TabsTrigger value="fixed">Fixed Overheads</TabsTrigger>
           <TabsTrigger value="clinical">Clinical Staff</TabsTrigger>
           <TabsTrigger value="admin">Administrative Staff</TabsTrigger>
+          <TabsTrigger value="hours">Admin/Training Hours</TabsTrigger>
         </TabsList>
 
         <TabsContent value="summary">
@@ -266,6 +269,10 @@ const ExpensesPage: React.FC = () => {
             onEdit={handleEditAdminStaff}
             onDelete={handleDeleteAdminStaff}
           />
+        </TabsContent>
+
+        <TabsContent value="hours">
+          <AdminHoursTab />
         </TabsContent>
       </Tabs>
 
