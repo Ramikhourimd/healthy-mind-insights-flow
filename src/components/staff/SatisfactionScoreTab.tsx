@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -108,30 +107,45 @@ const SatisfactionScoreTab: React.FC = () => {
           const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
           const jsonData = XLSX.utils.sheet_to_json(firstSheet);
 
-          console.log('Parsed Excel data:', jsonData);
+          console.log('Raw Excel data:', jsonData);
+          console.log('First row keys:', jsonData.length > 0 ? Object.keys(jsonData[0]) : 'No data');
 
-          const parsedData: RawSatisfactionData[] = jsonData.map((row: any) => ({
-            id_serial: String(row.ID_serial || row.id_serial || ''),
-            first_name: row.first_name || row.FirstName || '',
-            last_name: row.last_name || row.LastName || '',
-            phone: row.phone || row.Phone || '',
-            start_time: row.start_time || row.StartTime || '',
-            doctor: row.Doctor || row.doctor || '',
-            cm: row.CM || row.cm || '',
-            psy: row.PSY || row.psy ? Number(row.PSY || row.psy) : undefined,
-            psy_wait: row.PSYwait || row.psy_wait ? Number(row.PSYwait || row.psy_wait) : undefined,
-            cm_1: row.CM_1 || row.cm_1 ? Number(row.CM_1 || row.cm_1) : undefined,
-            recommand: row.Recommand || row.recommand ? Number(row.Recommand || row.recommand) : undefined,
-            comment: row.comment || row.Comment || '',
-          }));
+          const parsedData: RawSatisfactionData[] = jsonData.map((row: any, index: number) => {
+            console.log(`Processing row ${index + 1}:`, row);
+            
+            // More flexible column mapping to handle various Excel formats
+            const mappedRow = {
+              id_serial: String(row.ID_serial || row.id_serial || row['ID Serial'] || row.id || row.ID || ''),
+              first_name: String(row.first_name || row.FirstName || row['First Name'] || row.firstName || ''),
+              last_name: String(row.last_name || row.LastName || row['Last Name'] || row.lastName || ''),
+              phone: String(row.phone || row.Phone || row.telephone || row.Telephone || ''),
+              start_time: row.start_time || row.StartTime || row['Start Time'] || row.startTime || '',
+              doctor: String(row.Doctor || row.doctor || row.DR || row.dr || ''),
+              cm: String(row.CM || row.cm || row.CaseManager || row.caseManager || ''),
+              psy: row.PSY || row.psy || row.Psy ? Number(row.PSY || row.psy || row.Psy) : undefined,
+              psy_wait: row.PSYwait || row.psy_wait || row['PSY Wait'] || row.psyWait ? Number(row.PSYwait || row.psy_wait || row['PSY Wait'] || row.psyWait) : undefined,
+              cm_1: row.CM_1 || row.cm_1 || row['CM 1'] || row.cm1 ? Number(row.CM_1 || row.cm_1 || row['CM 1'] || row.cm1) : undefined,
+              recommand: row.Recommand || row.recommand || row.Recommend || row.recommend ? Number(row.Recommand || row.recommand || row.Recommend || row.recommend) : undefined,
+              comment: String(row.comment || row.Comment || row.comments || row.Comments || ''),
+            };
 
+            console.log(`Mapped row ${index + 1}:`, mappedRow);
+            return mappedRow;
+          });
+
+          console.log('Total parsed records:', parsedData.length);
           resolve(parsedData);
         } catch (error) {
+          console.error('Excel parsing error:', error);
           reject(error);
         }
       };
 
-      reader.onerror = () => reject(new Error('Failed to read file'));
+      reader.onerror = () => {
+        console.error('File reading error');
+        reject(new Error('Failed to read file'));
+      };
+      
       reader.readAsArrayBuffer(file);
     });
   };
@@ -150,48 +164,78 @@ const SatisfactionScoreTab: React.FC = () => {
     setIsUploading(true);
 
     try {
+      console.log('Starting Excel file processing...');
+      
       // Parse the Excel file
       const parsedData = await parseExcelFile(selectedFile);
       
-      console.log('Processing', parsedData.length, 'records');
+      console.log('Excel parsing completed. Processing', parsedData.length, 'records');
+
+      if (parsedData.length === 0) {
+        throw new Error('No data found in Excel file');
+      }
 
       // Clear existing raw data (replace strategy as requested)
-      // Fix: Use a proper WHERE clause that will match all records
+      console.log('Clearing existing data...');
       const { error: deleteError } = await supabase
         .from('raw_satisfaction_data')
         .delete()
         .gte('created_at', '1900-01-01'); // This will match all records
 
-      if (deleteError) throw deleteError;
+      if (deleteError) {
+        console.error('Delete error:', deleteError);
+        throw deleteError;
+      }
 
-      // Insert new raw data
-      const insertData = parsedData.map(record => ({
-        id_serial: record.id_serial,
-        first_name: record.first_name || null,
-        last_name: record.last_name || null,
-        phone: record.phone || null,
-        start_time: record.start_time ? new Date(record.start_time).toISOString() : null,
-        doctor: record.doctor || null,
-        cm: record.cm || null,
-        psy: record.psy || null,
-        psy_wait: record.psy_wait || null,
-        cm_1: record.cm_1 || null,
-        recommand: record.recommand || null,
-        comment: record.comment || null,
-      }));
+      console.log('Existing data cleared. Inserting new data...');
 
-      const { error: insertError } = await supabase
-        .from('raw_satisfaction_data')
-        .insert(insertData);
+      // Insert new raw data in smaller batches to avoid timeout
+      const batchSize = 100;
+      for (let i = 0; i < parsedData.length; i += batchSize) {
+        const batch = parsedData.slice(i, i + batchSize);
+        const insertData = batch.map(record => ({
+          id_serial: record.id_serial || '',
+          first_name: record.first_name || null,
+          last_name: record.last_name || null,
+          phone: record.phone || null,
+          start_time: record.start_time ? new Date(record.start_time).toISOString() : null,
+          doctor: record.doctor || null,
+          cm: record.cm || null,
+          psy: record.psy || null,
+          psy_wait: record.psy_wait || null,
+          cm_1: record.cm_1 || null,
+          recommand: record.recommand || null,
+          comment: record.comment || null,
+        }));
 
-      if (insertError) throw insertError;
+        console.log(`Inserting batch ${Math.floor(i/batchSize) + 1}:`, insertData.length, 'records');
+
+        const { error: insertError } = await supabase
+          .from('raw_satisfaction_data')
+          .insert(insertData);
+
+        if (insertError) {
+          console.error('Insert error for batch:', insertError);
+          throw insertError;
+        }
+      }
+
+      console.log('Data insertion completed. Calculating averages...');
 
       // Calculate and update averages using the stored functions
       const { error: doctorCalcError } = await supabase.rpc('calculate_doctor_averages');
-      if (doctorCalcError) throw doctorCalcError;
+      if (doctorCalcError) {
+        console.error('Doctor calculation error:', doctorCalcError);
+        throw doctorCalcError;
+      }
 
       const { error: cmCalcError } = await supabase.rpc('calculate_cm_averages');
-      if (cmCalcError) throw cmCalcError;
+      if (cmCalcError) {
+        console.error('CM calculation error:', cmCalcError);
+        throw cmCalcError;
+      }
+
+      console.log('Average calculations completed. Refreshing display...');
 
       // Refresh the displayed data
       await fetchScores();
@@ -210,7 +254,7 @@ const SatisfactionScoreTab: React.FC = () => {
       console.error("Error processing upload:", error);
       toast({
         title: "Upload Failed",
-        description: "Failed to process the Excel file. Please check the format and try again.",
+        description: `Failed to process the Excel file: ${error instanceof Error ? error.message : 'Unknown error'}. Please check the format and try again.`,
         variant: "destructive",
       });
     } finally {
@@ -256,8 +300,9 @@ const SatisfactionScoreTab: React.FC = () => {
           </Button>
 
           <div className="text-sm text-muted-foreground">
-            <p><strong>Expected columns:</strong> ID_serial, first_name, last_name, phone, start_time, Doctor, CM, PSY, PSYwait, CM_1, Recommand, comment</p>
-            <p><strong>Note:</strong> This will replace all existing satisfaction data with the new upload.</p>
+            <p><strong>Expected columns:</strong> ID_serial (or id), first_name, last_name, phone, start_time, Doctor, CM, PSY, PSYwait, CM_1, Recommand, comment</p>
+            <p><strong>Note:</strong> Column names are flexible - the system will try to match variations like "First Name", "firstName", etc.</p>
+            <p><strong>Replace mode:</strong> This will replace all existing satisfaction data with the new upload.</p>
           </div>
         </CardContent>
       </Card>
