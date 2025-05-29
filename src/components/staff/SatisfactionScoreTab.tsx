@@ -156,10 +156,11 @@ const SatisfactionScoreTab: React.FC = () => {
       console.log('Processing', parsedData.length, 'records');
 
       // Clear existing raw data (replace strategy as requested)
+      // Fix: Use a proper WHERE clause that will match all records
       const { error: deleteError } = await supabase
         .from('raw_satisfaction_data')
         .delete()
-        .neq('id_serial', 'dummy'); // Delete all records
+        .gte('created_at', '1900-01-01'); // This will match all records
 
       if (deleteError) throw deleteError;
 
