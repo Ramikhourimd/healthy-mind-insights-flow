@@ -8,7 +8,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useFinance } from "@/context/FinanceContext";
 import { StaffPerformanceMetrics } from "@/types/finance";
-import { Pencil, Plus } from "lucide-react";
+import { Pencil, Plus, Check, X, Edit } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import SatisfactionScoreTab from "./SatisfactionScoreTab";
@@ -29,6 +29,8 @@ const StaffPerformanceTab: React.FC = () => {
     availableHours: 0,
   });
   const [isLoading, setIsLoading] = useState(false);
+  const [editingCell, setEditingCell] = useState<{staffId: string, field: 'satisfactionScore' | 'availableHours'} | null>(null);
+  const [editingValues, setEditingValues] = useState<{[key: string]: {satisfactionScore?: number, availableHours?: number}}>({});
 
   // Fetch performance metrics for current period
   const fetchPerformanceMetrics = async () => {
@@ -91,6 +93,80 @@ const StaffPerformanceTab: React.FC = () => {
     fetchPerformanceMetrics();
     calculateNoShowRates();
   }, [currentPeriod, staffMembers]);
+
+  // Handle inline editing
+  const handleCellEdit = (staffId: string, field: 'satisfactionScore' | 'availableHours') => {
+    const metrics = getMetricsForStaff(staffId);
+    setEditingCell({ staffId, field });
+    setEditingValues({
+      ...editingValues,
+      [staffId]: {
+        ...editingValues[staffId],
+        [field]: metrics ? metrics[field] : (field === 'satisfactionScore' ? undefined : 0)
+      }
+    });
+  };
+
+  const handleCellSave = async (staffId: string, field: 'satisfactionScore' | 'availableHours') => {
+    try {
+      const newValue = editingValues[staffId]?.[field];
+      const existingMetrics = getMetricsForStaff(staffId);
+
+      const metricsData = {
+        staff_id: staffId,
+        month: currentPeriod.month,
+        year: currentPeriod.year,
+        satisfaction_score: field === 'satisfactionScore' ? newValue : (existingMetrics?.satisfactionScore || null),
+        available_hours: field === 'availableHours' ? (newValue || 0) : (existingMetrics?.availableHours || 0),
+      };
+
+      if (existingMetrics) {
+        const { error } = await supabase
+          .from('staff_performance_metrics')
+          .update(metricsData)
+          .eq('id', existingMetrics.id);
+
+        if (error) throw error;
+      } else {
+        const { error } = await supabase
+          .from('staff_performance_metrics')
+          .insert(metricsData);
+
+        if (error) throw error;
+      }
+
+      setEditingCell(null);
+      fetchPerformanceMetrics();
+      
+      toast({
+        title: "Success",
+        description: "Performance metrics updated successfully.",
+      });
+    } catch (error) {
+      console.error("Error saving performance metrics:", error);
+      toast({
+        title: "Error",
+        description: "Failed to save performance metrics.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleCellCancel = () => {
+    setEditingCell(null);
+    setEditingValues({});
+  };
+
+  const handleEditingValueChange = (staffId: string, field: 'satisfactionScore' | 'availableHours', value: string) => {
+    const numValue = value === '' ? undefined : Number(value);
+    setEditingValues({
+      ...editingValues,
+      [staffId]: {
+        ...editingValues[staffId],
+        [field]: numValue
+      }
+    });
+  };
 
   // Get staff name by ID
   const getStaffNameById = (id: string) => {
@@ -226,15 +302,101 @@ const StaffPerformanceTab: React.FC = () => {
                   clinicalStaff.map((staff) => {
                     const metrics = getMetricsForStaff(staff.id);
                     const noShowRate = noShowRates[staff.id];
+                    const isEditingSatisfaction = editingCell?.staffId === staff.id && editingCell?.field === 'satisfactionScore';
+                    const isEditingHours = editingCell?.staffId === staff.id && editingCell?.field === 'availableHours';
                     
                     return (
                       <TableRow key={staff.id}>
                         <TableCell>{staff.name}</TableCell>
                         <TableCell className="text-right">
-                          {metrics?.satisfactionScore !== undefined ? `${metrics.satisfactionScore}%` : "Not set"}
+                          {isEditingSatisfaction ? (
+                            <div className="flex items-center gap-2 justify-end">
+                              <Input
+                                type="number"
+                                min="0"
+                                max="100"
+                                value={editingValues[staff.id]?.satisfactionScore || ""}
+                                onChange={(e) => handleEditingValueChange(staff.id, 'satisfactionScore', e.target.value)}
+                                className="w-20 text-right"
+                                autoFocus
+                              />
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => handleCellSave(staff.id, 'satisfactionScore')}
+                                className="h-6 w-6"
+                              >
+                                <Check className="h-3 w-3" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={handleCellCancel}
+                                className="h-6 w-6"
+                              >
+                                <X className="h-3 w-3" />
+                              </Button>
+                            </div>
+                          ) : (
+                            <div className="flex items-center gap-2 justify-end">
+                              <span>
+                                {metrics?.satisfactionScore !== undefined ? `${metrics.satisfactionScore}%` : "Not set"}
+                              </span>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => handleCellEdit(staff.id, 'satisfactionScore')}
+                                className="h-6 w-6"
+                              >
+                                <Edit className="h-3 w-3" />
+                              </Button>
+                            </div>
+                          )}
                         </TableCell>
                         <TableCell className="text-right">
-                          {metrics ? metrics.availableHours : "Not set"}
+                          {isEditingHours ? (
+                            <div className="flex items-center gap-2 justify-end">
+                              <Input
+                                type="number"
+                                min="0"
+                                step="0.1"
+                                value={editingValues[staff.id]?.availableHours || ""}
+                                onChange={(e) => handleEditingValueChange(staff.id, 'availableHours', e.target.value)}
+                                className="w-20 text-right"
+                                autoFocus
+                              />
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => handleCellSave(staff.id, 'availableHours')}
+                                className="h-6 w-6"
+                              >
+                                <Check className="h-3 w-3" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={handleCellCancel}
+                                className="h-6 w-6"
+                              >
+                                <X className="h-3 w-3" />
+                              </Button>
+                            </div>
+                          ) : (
+                            <div className="flex items-center gap-2 justify-end">
+                              <span>
+                                {metrics ? metrics.availableHours : "Not set"}
+                              </span>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => handleCellEdit(staff.id, 'availableHours')}
+                                className="h-6 w-6"
+                              >
+                                <Edit className="h-3 w-3" />
+                              </Button>
+                            </div>
+                          )}
                         </TableCell>
                         <TableCell className="text-right">
                           {noShowRate !== undefined ? `${noShowRate}%` : "Calculating..."}
