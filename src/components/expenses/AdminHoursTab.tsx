@@ -3,7 +3,8 @@ import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Plus, Pencil, Trash } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Plus, Pencil, Trash, Save } from "lucide-react";
 import { useFinance } from "@/context/FinanceContext";
 import { AdminHoursDialog } from "./dialogs/AdminHoursDialog";
 import { supabase } from "@/integrations/supabase/client";
@@ -23,11 +24,18 @@ const AdminHoursTab: React.FC = () => {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingHours, setEditingHours] = useState<AdminTrainingHours | null>(null);
   const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [editableData, setEditableData] = useState<{[staffId: string]: {adminHours: number, trainingHours: number}}>({});
 
   // Load admin hours from Supabase
   useEffect(() => {
     loadAdminHours();
   }, [currentPeriod]);
+
+  // Initialize editable data when staff members or admin hours change
+  useEffect(() => {
+    initializeEditableData();
+  }, [staffMembers, adminHours, currentPeriod]);
 
   const loadAdminHours = async () => {
     try {
@@ -60,6 +68,24 @@ const AdminHoursTab: React.FC = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const initializeEditableData = () => {
+    const clinicalStaff = staffMembers.filter(
+      staff => staff.role === "Psychiatrist" || staff.role === "CaseManager"
+    );
+
+    const newEditableData: {[staffId: string]: {adminHours: number, trainingHours: number}} = {};
+
+    clinicalStaff.forEach(staff => {
+      const existingHours = adminHours.find(h => h.staffId === staff.id);
+      newEditableData[staff.id] = {
+        adminHours: existingHours ? existingHours.adminHours : 2, // Default 2 hours admin
+        trainingHours: existingHours ? existingHours.trainingHours : 1 // Default 1 hour training
+      };
+    });
+
+    setEditableData(newEditableData);
   };
 
   // Filter admin hours for current period
@@ -96,6 +122,67 @@ const AdminHoursTab: React.FC = () => {
     const adminCost = adminHours * (rates.admin_rate || 0);
     const trainingCost = trainingHours * (rates.training_rate || 0);
     return adminCost + trainingCost;
+  };
+
+  // Handle input changes in editable table
+  const handleEditableChange = (staffId: string, field: 'adminHours' | 'trainingHours', value: string) => {
+    const numValue = Number(value) || 0;
+    setEditableData(prev => ({
+      ...prev,
+      [staffId]: {
+        ...prev[staffId],
+        [field]: numValue
+      }
+    }));
+  };
+
+  // Save all editable data
+  const handleSaveAll = async () => {
+    try {
+      setSaving(true);
+
+      // Prepare data for upsert
+      const dataToSave = Object.entries(editableData).map(([staffId, data]) => ({
+        staff_id: staffId,
+        admin_hours: data.adminHours,
+        training_hours: data.trainingHours,
+        month: currentPeriod.month,
+        year: currentPeriod.year
+      }));
+
+      // Delete existing records for this period first
+      const { error: deleteError } = await supabase
+        .from('admin_training_hours')
+        .delete()
+        .eq('month', currentPeriod.month)
+        .eq('year', currentPeriod.year);
+
+      if (deleteError) throw deleteError;
+
+      // Insert new records
+      const { error: insertError } = await supabase
+        .from('admin_training_hours')
+        .insert(dataToSave);
+
+      if (insertError) throw insertError;
+
+      await loadAdminHours();
+      updateFinancialSummary();
+      
+      toast({
+        title: "Success",
+        description: "All admin/training hours saved successfully",
+      });
+    } catch (error) {
+      console.error('Error saving admin hours:', error);
+      toast({
+        title: "Error",
+        description: "Failed to save admin/training hours",
+        variant: "destructive",
+      });
+    } finally {
+      setSaving(false);
+    }
   };
 
   // Handle add new hours
@@ -139,7 +226,7 @@ const AdminHoursTab: React.FC = () => {
     }
   };
 
-  // Handle save hours
+  // Handle save hours from dialog
   const handleSave = async (hoursData: Omit<AdminTrainingHours, 'id'>) => {
     try {
       if (editingHours) {
@@ -190,11 +277,16 @@ const AdminHoursTab: React.FC = () => {
     }
   };
 
-  // Calculate totals
-  const totalAdminHours = filteredAdminHours.reduce((sum, h) => sum + h.adminHours, 0);
-  const totalTrainingHours = filteredAdminHours.reduce((sum, h) => sum + h.trainingHours, 0);
-  const totalCost = filteredAdminHours.reduce((sum, h) => 
-    sum + calculateHoursCost(h.staffId, h.adminHours, h.trainingHours), 0
+  // Get clinical staff members
+  const clinicalStaff = staffMembers.filter(
+    staff => staff.role === "Psychiatrist" || staff.role === "CaseManager"
+  );
+
+  // Calculate totals for editable data
+  const totalAdminHours = Object.values(editableData).reduce((sum, data) => sum + data.adminHours, 0);
+  const totalTrainingHours = Object.values(editableData).reduce((sum, data) => sum + data.trainingHours, 0);
+  const totalCost = Object.entries(editableData).reduce((sum, [staffId, data]) => 
+    sum + calculateHoursCost(staffId, data.adminHours, data.trainingHours), 0
   );
 
   if (loading) {
@@ -203,16 +295,24 @@ const AdminHoursTab: React.FC = () => {
 
   return (
     <>
-      <div className="flex justify-end mb-4">
-        <Button onClick={handleAddNew}>
-          <Plus className="mr-2 h-4 w-4" /> Add Admin/Training Hours
+      <div className="flex justify-between items-center mb-4">
+        <Button 
+          onClick={handleSaveAll} 
+          disabled={saving}
+          className="bg-green-600 hover:bg-green-700"
+        >
+          <Save className="mr-2 h-4 w-4" /> 
+          {saving ? "Saving..." : "Save All Changes"}
+        </Button>
+        <Button onClick={handleAddNew} variant="outline">
+          <Plus className="mr-2 h-4 w-4" /> Add Individual Entry
         </Button>
       </div>
 
       <Card className="shadow-sm">
         <CardHeader>
           <CardTitle className="text-lg font-medium">
-            Administrative & Training Hours ({totalAdminHours + totalTrainingHours} total hours)
+            Administrative & Training Hours - Quick Edit ({totalAdminHours + totalTrainingHours} total hours)
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -220,16 +320,77 @@ const AdminHoursTab: React.FC = () => {
             <TableHeader>
               <TableRow>
                 <TableHead>Staff Member</TableHead>
-                <TableHead className="text-right">Admin Hours</TableHead>
-                <TableHead className="text-right">Training Hours</TableHead>
+                <TableHead className="text-center">Admin Hours</TableHead>
+                <TableHead className="text-center">Training Hours</TableHead>
                 <TableHead className="text-right">Total Hours</TableHead>
                 <TableHead className="text-right">Total Cost</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredAdminHours.length > 0 ? (
-                filteredAdminHours.map((hours) => {
+              {clinicalStaff.map((staff) => {
+                const staffData = editableData[staff.id] || { adminHours: 2, trainingHours: 1 };
+                const totalHours = staffData.adminHours + staffData.trainingHours;
+                const cost = calculateHoursCost(staff.id, staffData.adminHours, staffData.trainingHours);
+                
+                return (
+                  <TableRow key={staff.id}>
+                    <TableCell className="font-medium">{staff.name}</TableCell>
+                    <TableCell className="text-center">
+                      <Input
+                        type="number"
+                        value={staffData.adminHours}
+                        onChange={(e) => handleEditableChange(staff.id, 'adminHours', e.target.value)}
+                        className="w-20 text-center"
+                        min={0}
+                        step={0.5}
+                      />
+                    </TableCell>
+                    <TableCell className="text-center">
+                      <Input
+                        type="number"
+                        value={staffData.trainingHours}
+                        onChange={(e) => handleEditableChange(staff.id, 'trainingHours', e.target.value)}
+                        className="w-20 text-center"
+                        min={0}
+                        step={0.5}
+                      />
+                    </TableCell>
+                    <TableCell className="text-right">{totalHours}</TableCell>
+                    <TableCell className="text-right">{formatCurrency(cost)}</TableCell>
+                  </TableRow>
+                );
+              })}
+              <TableRow className="border-t-2 bg-gray-50">
+                <TableCell className="font-bold">Total</TableCell>
+                <TableCell className="text-center font-bold">{totalAdminHours}</TableCell>
+                <TableCell className="text-center font-bold">{totalTrainingHours}</TableCell>
+                <TableCell className="text-right font-bold">{totalAdminHours + totalTrainingHours}</TableCell>
+                <TableCell className="text-right font-bold">{formatCurrency(totalCost)}</TableCell>
+              </TableRow>
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
+
+      {filteredAdminHours.length > 0 && (
+        <Card className="shadow-sm mt-6">
+          <CardHeader>
+            <CardTitle className="text-lg font-medium">Individual Entries</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Staff Member</TableHead>
+                  <TableHead className="text-right">Admin Hours</TableHead>
+                  <TableHead className="text-right">Training Hours</TableHead>
+                  <TableHead className="text-right">Total Hours</TableHead>
+                  <TableHead className="text-right">Total Cost</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredAdminHours.map((hours) => {
                   const totalHours = hours.adminHours + hours.trainingHours;
                   const cost = calculateHoursCost(hours.staffId, hours.adminHours, hours.trainingHours);
                   
@@ -252,28 +413,12 @@ const AdminHoursTab: React.FC = () => {
                       </TableCell>
                     </TableRow>
                   );
-                })
-              ) : (
-                <TableRow>
-                  <TableCell colSpan={6} className="text-center py-4">
-                    No administrative or training hours recorded for this period
-                  </TableCell>
-                </TableRow>
-              )}
-              {filteredAdminHours.length > 0 && (
-                <TableRow className="border-t-2">
-                  <TableCell className="font-bold">Total</TableCell>
-                  <TableCell className="text-right font-bold">{totalAdminHours}</TableCell>
-                  <TableCell className="text-right font-bold">{totalTrainingHours}</TableCell>
-                  <TableCell className="text-right font-bold">{totalAdminHours + totalTrainingHours}</TableCell>
-                  <TableCell className="text-right font-bold">{formatCurrency(totalCost)}</TableCell>
-                  <TableCell></TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
+                })}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+      )}
 
       <AdminHoursDialog
         isOpen={isDialogOpen}
