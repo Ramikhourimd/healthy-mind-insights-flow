@@ -50,6 +50,8 @@ const ExpensesPage: React.FC = () => {
 
   const loadAdminTrainingHours = async () => {
     try {
+      console.log(`Loading admin training hours for ${currentPeriod.month}/${currentPeriod.year}`);
+      
       const { data, error } = await supabase
         .from('admin_training_hours')
         .select('*')
@@ -68,7 +70,7 @@ const ExpensesPage: React.FC = () => {
       }));
 
       setAdminTrainingHours(formattedData);
-      console.log('Loaded admin training hours:', formattedData);
+      console.log('Successfully loaded admin training hours:', formattedData);
     } catch (error) {
       console.error('Error loading admin training hours:', error);
     }
@@ -88,18 +90,22 @@ const ExpensesPage: React.FC = () => {
       session => session.month === currentPeriod.month && session.year === currentPeriod.year
     );
 
+    const filteredAdminTrainingHours = adminTrainingHours.filter(
+      hours => hours.month === currentPeriod.month && hours.year === currentPeriod.year
+    );
+
     console.log(`Filtered data for ${currentPeriod.month}/${currentPeriod.year}:`);
     console.log('- Clinical sessions:', filteredSessions.length);
     console.log('- Admin staff:', filteredAdminStaff.length);
     console.log('- Fixed overheads:', filteredOverheads.length);
-    console.log('- Admin/training hours:', adminTrainingHours.length);
+    console.log('- Admin/training hours entries:', filteredAdminTrainingHours.length);
     console.log('- Available clinical staff rates:', clinicalStaffRates.length);
 
     return {
       filteredOverheads,
       filteredAdminStaff,
       filteredSessions,
-      filteredAdminTrainingHours: adminTrainingHours
+      filteredAdminTrainingHours
     };
   }, [fixedOverheads, adminStaffFinancials, clinicalSessions, adminTrainingHours, currentPeriod, clinicalStaffRates.length]);
 
@@ -107,7 +113,7 @@ const ExpensesPage: React.FC = () => {
   const calculations = useMemo(() => {
     const { filteredSessions, filteredAdminTrainingHours } = filteredData;
 
-    console.log('Starting clinical calculations...');
+    console.log('=== STARTING CALCULATIONS ===');
     console.log('Clinical staff rates available:', clinicalStaffRates);
 
     const clinicalBreakdown: { [staffId: string]: { 
@@ -176,10 +182,15 @@ const ExpensesPage: React.FC = () => {
       totalCalculatedClinicalCosts += sessionCost;
     });
 
-    // Calculate admin/training hours costs with more detailed logging
+    // Calculate admin/training hours costs with detailed logging
     let totalAdminTrainingCosts = 0;
-    console.log('Starting admin/training hours calculation...');
+    console.log('=== ADMIN/TRAINING HOURS CALCULATION ===');
     console.log('Filtered admin training hours:', filteredAdminTrainingHours);
+    console.log('Available staff rates:', clinicalStaffRates);
+    
+    if (filteredAdminTrainingHours.length === 0) {
+      console.warn('No admin/training hours found for current period');
+    }
     
     filteredAdminTrainingHours.forEach(hours => {
       const staffRates = clinicalStaffRates.find(r => r.staffId === hours.staffId);
@@ -190,8 +201,8 @@ const ExpensesPage: React.FC = () => {
       console.log('- Staff rates:', staffRates);
       
       if (staffRates) {
-        const adminCost = hours.adminHours * (staffRates.admin_rate || 0);
-        const trainingCost = hours.trainingHours * (staffRates.training_rate || 0);
+        const adminCost = Number(hours.adminHours) * Number(staffRates.admin_rate || 0);
+        const trainingCost = Number(hours.trainingHours) * Number(staffRates.training_rate || 0);
         const totalCost = adminCost + trainingCost;
         
         console.log(`- Admin cost: ${hours.adminHours} * ${staffRates.admin_rate} = ${adminCost}`);
@@ -204,12 +215,13 @@ const ExpensesPage: React.FC = () => {
       }
     });
     
+    console.log('=== CALCULATION RESULTS ===');
     console.log('Clinical breakdown calculated:', clinicalBreakdown);
     console.log('Total calculated clinical costs:', totalCalculatedClinicalCosts);
     console.log('Total admin/training costs:', totalAdminTrainingCosts);
     console.log('Financial summary clinical costs:', financialSummary?.totalClinicalCosts);
     
-    return {
+    const finalCalculations = {
       clinicalBreakdown,
       totalClinicalCosts: totalCalculatedClinicalCosts,
       totalAdminCosts: financialSummary?.totalAdminCosts || 0,
@@ -217,6 +229,10 @@ const ExpensesPage: React.FC = () => {
       totalAdminTrainingCosts,
       totalExpenses: (totalCalculatedClinicalCosts + (financialSummary?.totalAdminCosts || 0) + (financialSummary?.totalFixedOverheads || 0) + totalAdminTrainingCosts)
     };
+    
+    console.log('Final calculations object:', finalCalculations);
+    
+    return finalCalculations;
   }, [filteredData, staffMembers, clinicalStaffRates, financialSummary, toast]);
 
   // Dialog states
@@ -275,6 +291,11 @@ const ExpensesPage: React.FC = () => {
     if (confirm("Are you sure you want to delete this admin staff member?")) {
       await deleteAdminStaff(id);
     }
+  };
+
+  // Add a refresh handler for when admin hours are updated
+  const handleAdminHoursUpdate = () => {
+    loadAdminTrainingHours();
   };
 
   return (
@@ -340,7 +361,7 @@ const ExpensesPage: React.FC = () => {
         </TabsContent>
 
         <TabsContent value="hours">
-          <AdminHoursTab />
+          <AdminHoursTab key={`${currentPeriod.month}-${currentPeriod.year}`} />
         </TabsContent>
       </Tabs>
 

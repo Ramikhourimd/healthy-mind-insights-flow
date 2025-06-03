@@ -36,6 +36,8 @@ export const ExpenseSummaryCard: React.FC<ExpenseSummaryProps> = ({
   toggleStaffDetailBreakdown,
   formatCurrency
 }) => {
+  console.log('ExpenseSummaryCard received calculations:', calculations);
+  
   return (
     <Card className="shadow-sm">
       <CardHeader>
@@ -73,7 +75,7 @@ export const ExpenseSummaryCard: React.FC<ExpenseSummaryProps> = ({
             <Collapsible open={clinicalBreakdownOpen} onOpenChange={setClinicalBreakdownOpen}>
               <CollapsibleContent>
                 {Object.entries(calculations.clinicalBreakdown).map(([staffId, data]: [string, any]) => (
-                  <React.Fragment key={staffId}>
+                  <div key={staffId}>
                     <TableRow className="bg-gray-50">
                       <TableCell className="pl-8 text-sm text-gray-600">
                         <button 
@@ -113,7 +115,7 @@ export const ExpenseSummaryCard: React.FC<ExpenseSummaryProps> = ({
                         </TableCell>
                       </TableRow>
                     )}
-                  </React.Fragment>
+                  </div>
                 ))}
               </CollapsibleContent>
             </Collapsible>
