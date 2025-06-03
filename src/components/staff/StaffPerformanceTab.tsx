@@ -7,6 +7,7 @@ import { StaffPerformanceMetrics } from "@/types/finance";
 import SatisfactionScoreTab from "./SatisfactionScoreTab";
 import PerformanceOverviewTable from "./PerformanceOverviewTable";
 import PerformanceMetricsDialog from "./PerformanceMetricsDialog";
+import StaffPerformanceCsvImport from "./StaffPerformanceCsvImport";
 import { useStaffPerformanceMetrics } from "@/hooks/useStaffPerformanceMetrics";
 
 const StaffPerformanceTab: React.FC = () => {
@@ -79,6 +80,11 @@ const StaffPerformanceTab: React.FC = () => {
             <Plus className="mr-2 h-4 w-4" /> Add Metrics
           </Button>
         </div>
+
+        <StaffPerformanceCsvImport 
+          staffMembers={clinicalStaff}
+          onImportComplete={fetchPerformanceMetrics}
+        />
 
         <PerformanceOverviewTable
           clinicalStaff={clinicalStaff}
