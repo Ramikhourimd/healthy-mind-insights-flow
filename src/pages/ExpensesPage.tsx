@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useFinance } from "@/context/FinanceContext";
@@ -293,6 +292,117 @@ const ExpensesPage: React.FC = () => {
     }
   };
 
+  // Copy from previous month handlers
+  const handleCopyOverheadsFromPreviousMonth = async () => {
+    try {
+      const prevMonth = currentPeriod.month === 1 ? 12 : currentPeriod.month - 1;
+      const prevYear = currentPeriod.month === 1 ? currentPeriod.year - 1 : currentPeriod.year;
+
+      const previousOverheads = fixedOverheads.filter(
+        overhead => overhead.month === prevMonth && overhead.year === prevYear
+      );
+
+      if (previousOverheads.length === 0) {
+        toast({
+          title: "No Previous Data",
+          description: `No fixed overheads found for ${new Date(prevYear, prevMonth - 1).toLocaleString('default', { month: 'long' })} ${prevYear}`,
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Check if current month already has data
+      const currentOverheads = filteredData.filteredOverheads;
+      if (currentOverheads.length > 0) {
+        if (!confirm("This will replace existing overhead data for the current month. Continue?")) {
+          return;
+        }
+        // Delete existing overheads for current month
+        for (const overhead of currentOverheads) {
+          await deleteFixedOverhead(overhead.id);
+        }
+      }
+
+      // Copy previous month's overheads to current month
+      for (const overhead of previousOverheads) {
+        await addFixedOverhead({
+          name: overhead.name,
+          monthlyCost: overhead.monthlyCost,
+          month: currentPeriod.month,
+          year: currentPeriod.year
+        });
+      }
+
+      toast({
+        title: "Success",
+        description: `Copied ${previousOverheads.length} overhead items from previous month`,
+      });
+    } catch (error) {
+      console.error('Error copying overheads from previous month:', error);
+      toast({
+        title: "Error",
+        description: "Failed to copy overheads from previous month",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleCopyAdminStaffFromPreviousMonth = async () => {
+    try {
+      const prevMonth = currentPeriod.month === 1 ? 12 : currentPeriod.month - 1;
+      const prevYear = currentPeriod.month === 1 ? currentPeriod.year - 1 : currentPeriod.year;
+
+      const previousAdminStaff = adminStaffFinancials.filter(
+        staff => staff.month === prevMonth && staff.year === prevYear
+      );
+
+      if (previousAdminStaff.length === 0) {
+        toast({
+          title: "No Previous Data",
+          description: `No admin staff data found for ${new Date(prevYear, prevMonth - 1).toLocaleString('default', { month: 'long' })} ${prevYear}`,
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Check if current month already has data
+      const currentAdminStaff = filteredData.filteredAdminStaff;
+      if (currentAdminStaff.length > 0) {
+        if (!confirm("This will replace existing admin staff data for the current month. Continue?")) {
+          return;
+        }
+        // Delete existing admin staff for current month
+        for (const staff of currentAdminStaff) {
+          await deleteAdminStaff(staff.id);
+        }
+      }
+
+      // Copy previous month's admin staff to current month
+      for (const staff of previousAdminStaff) {
+        await addAdminStaff({
+          name: staff.name,
+          role: staff.role,
+          baseSalary: staff.baseSalary,
+          commission: staff.commission,
+          month: currentPeriod.month,
+          year: currentPeriod.year
+        });
+      }
+
+      toast({
+        title: "Success",
+        description: `Copied ${previousAdminStaff.length} admin staff members from previous month`,
+      });
+    } catch (error) {
+      console.error('Error copying admin staff from previous month:', error);
+      toast({
+        title: "Error",
+        description: "Failed to copy admin staff from previous month",
+        variant: "destructive",
+      });
+    }
+  };
+
   // Add a refresh handler for when admin hours are updated
   const handleAdminHoursUpdate = () => {
     loadAdminTrainingHours();
@@ -342,6 +452,7 @@ const ExpensesPage: React.FC = () => {
             onAddNew={handleAddNewOverhead}
             onEdit={handleEditOverhead}
             onDelete={handleDeleteOverhead}
+            onCopyFromPreviousMonth={handleCopyOverheadsFromPreviousMonth}
           />
         </TabsContent>
 
@@ -357,6 +468,7 @@ const ExpensesPage: React.FC = () => {
             onAddNew={handleAddNewAdminStaff}
             onEdit={handleEditAdminStaff}
             onDelete={handleDeleteAdminStaff}
+            onCopyFromPreviousMonth={handleCopyAdminStaffFromPreviousMonth}
           />
         </TabsContent>
 
