@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useFinance } from "@/context/FinanceContext";
@@ -67,6 +68,7 @@ const ExpensesPage: React.FC = () => {
       }));
 
       setAdminTrainingHours(formattedData);
+      console.log('Loaded admin training hours:', formattedData);
     } catch (error) {
       console.error('Error loading admin training hours:', error);
     }
@@ -174,14 +176,31 @@ const ExpensesPage: React.FC = () => {
       totalCalculatedClinicalCosts += sessionCost;
     });
 
-    // Calculate admin/training hours costs
+    // Calculate admin/training hours costs with more detailed logging
     let totalAdminTrainingCosts = 0;
+    console.log('Starting admin/training hours calculation...');
+    console.log('Filtered admin training hours:', filteredAdminTrainingHours);
+    
     filteredAdminTrainingHours.forEach(hours => {
       const staffRates = clinicalStaffRates.find(r => r.staffId === hours.staffId);
+      const staffMember = staffMembers.find(s => s.id === hours.staffId);
+      
+      console.log(`Processing admin/training hours for staff ${hours.staffId} (${staffMember?.name}):`);
+      console.log('- Hours data:', hours);
+      console.log('- Staff rates:', staffRates);
+      
       if (staffRates) {
         const adminCost = hours.adminHours * (staffRates.admin_rate || 0);
         const trainingCost = hours.trainingHours * (staffRates.training_rate || 0);
-        totalAdminTrainingCosts += adminCost + trainingCost;
+        const totalCost = adminCost + trainingCost;
+        
+        console.log(`- Admin cost: ${hours.adminHours} * ${staffRates.admin_rate} = ${adminCost}`);
+        console.log(`- Training cost: ${hours.trainingHours} * ${staffRates.training_rate} = ${trainingCost}`);
+        console.log(`- Total cost for this staff: ${totalCost}`);
+        
+        totalAdminTrainingCosts += totalCost;
+      } else {
+        console.warn(`No rates found for staff ${hours.staffId} (${staffMember?.name})`);
       }
     });
     
