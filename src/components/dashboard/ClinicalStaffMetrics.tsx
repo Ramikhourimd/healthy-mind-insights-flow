@@ -37,12 +37,12 @@ interface StaffMetrics {
 }
 
 const ClinicalStaffMetrics: React.FC = () => {
-  const { staffMembers, clinicalSessions, currentPeriod } = useFinance();
+  const { staffMembers, clinicalSessions, currentPeriod, clinicalStaffRates, adminTrainingHours } = useFinance();
   
   const [selectedMonth, setSelectedMonth] = useState(currentPeriod.month);
   const [selectedYear, setSelectedYear] = useState(currentPeriod.year);
 
-  // Mock data calculation - in real app, this would come from your cost calculation logic
+  // Real data calculation using actual Supabase data
   const staffMetrics = useMemo(() => {
     const clinicalStaff = staffMembers.filter(s => 
       s.role === "Psychiatrist" || s.role === "CaseManager"
@@ -54,24 +54,83 @@ const ClinicalStaffMetrics: React.FC = () => {
         s => s.staffId === staff.id && s.month === selectedMonth && s.year === selectedYear
       );
 
-      const totalSessions = staffSessions.reduce((sum, s) => sum + s.count, 0);
-      const noShowSessions = staffSessions
-        .filter(s => s.showStatus === "NoShow")
-        .reduce((sum, s) => sum + s.count, 0);
+      // Get staff rates (use the most recent rate)
+      const staffRate = clinicalStaffRates
+        .filter(r => r.staffId === staff.id)
+        .sort((a, b) => new Date(b.effectiveDate).getTime() - new Date(a.effectiveDate).getTime())[0];
 
-      // Mock calculations - replace with your actual cost calculation logic
-      const clinicalHours = totalSessions * 1; // Assuming 1 hour per session
-      const noShowHours = noShowSessions * 0.5; // Assuming 0.5 hours for no-shows
-      const idleHours = Math.max(0, 40 - clinicalHours - noShowHours); // Assuming 40 hour weeks
-      
-      const baseRate = staff.role === "Psychiatrist" ? 150 : 100; // Mock rates
-      const clinicalCost = clinicalHours * baseRate;
-      const noShowCost = noShowHours * baseRate * 0.5;
-      const idleCost = idleHours * baseRate * 0.3;
-      const otCost = Math.max(0, clinicalHours - 40) * baseRate * 1.5;
-      
+      // Get admin/training hours for this staff member
+      const adminTraining = adminTrainingHours.find(
+        at => at.staffId === staff.id && at.month === selectedMonth && at.year === selectedYear
+      );
+
+      // Calculate clinical hours based on sessions
+      const clinicalHours = staffSessions.reduce((sum, session) => {
+        if (session.showStatus === "Show") {
+          return sum + (session.count * (session.duration / 60)); // Convert minutes to hours
+        }
+        return sum;
+      }, 0);
+
+      // Calculate no-show hours
+      const noShowHours = staffSessions.reduce((sum, session) => {
+        if (session.showStatus === "NoShow") {
+          return sum + (session.count * (session.duration / 60)); // Convert minutes to hours
+        }
+        return sum;
+      }, 0);
+
+      // Get admin and training hours from database
+      const adminHours = adminTraining?.adminHours || 0;
+      const trainingHours = adminTraining?.trainingHours || 0;
+
+      // Calculate idle hours (assuming 40 hour work week minus productive time)
+      const totalProductiveHours = clinicalHours + noShowHours + adminHours + trainingHours;
+      const idleHours = Math.max(0, 40 - totalProductiveHours);
+
+      // Calculate costs using real rates
+      let clinicalCost = 0;
+      let noShowCost = 0;
+      let adminCost = 0;
+      let trainingCost = 0;
+
+      if (staffRate) {
+        // Calculate clinical cost based on session types
+        staffSessions.forEach(session => {
+          if (session.showStatus === "Show") {
+            const sessionHours = session.count * (session.duration / 60);
+            if (session.meetingType === "Intake") {
+              clinicalCost += sessionHours * (staffRate.intakeSessionRate || 0);
+            } else {
+              clinicalCost += sessionHours * (staffRate.followUpSessionRate || 0);
+            }
+          } else if (session.showStatus === "NoShow") {
+            const sessionHours = session.count * (session.duration / 60);
+            if (session.meetingType === "Intake") {
+              noShowCost += sessionHours * (staffRate.noShowIntakeRate || 0);
+            } else {
+              noShowCost += sessionHours * (staffRate.noShowFollowUpRate || 0);
+            }
+          }
+        });
+
+        // Calculate admin and training costs
+        adminCost = adminHours * (staffRate.adminRate || 0);
+        trainingCost = trainingHours * (staffRate.trainingRate || 0);
+      }
+
+      // Calculate idle cost (using admin rate as baseline for idle time)
+      const idleCost = idleHours * (staffRate?.adminRate || 0) * 0.3; // 30% of admin rate for idle time
+
+      // Calculate overtime (hours over 40)
+      const overtimeHours = Math.max(0, totalProductiveHours - 40);
+      const otCost = overtimeHours * (staffRate?.adminRate || 0) * 1.5; // 1.5x rate for overtime
+
+      // Calculate cost per clinical hour
       const costPerClinicalHour = clinicalHours > 0 ? clinicalCost / clinicalHours : 0;
-      const utilizationPercent = ((clinicalHours + noShowHours) / 40) * 100;
+
+      // Calculate utilization percentage
+      const utilizationPercent = totalProductiveHours > 0 ? (totalProductiveHours / 40) * 100 : 0;
 
       return {
         staffName: staff.name,
@@ -87,7 +146,7 @@ const ClinicalStaffMetrics: React.FC = () => {
         role: staff.role,
       };
     });
-  }, [staffMembers, clinicalSessions, selectedMonth, selectedYear]);
+  }, [staffMembers, clinicalSessions, clinicalStaffRates, adminTrainingHours, selectedMonth, selectedYear]);
 
   // Calculate KPIs
   const totalClinicalCost = staffMetrics.reduce((sum, s) => sum + s.clinicalCost, 0);
