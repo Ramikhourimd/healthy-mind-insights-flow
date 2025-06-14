@@ -20,6 +20,7 @@ import {
   Scatter,
   Cell,
 } from "recharts";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useFinance } from "@/context/FinanceContext";
 
 interface StaffMetrics {
@@ -34,6 +35,27 @@ interface StaffMetrics {
   costPerClinicalHour: number;
   utilizationPercent: number;
   role: string;
+  // New fields for the restructured table
+  paymentEfficiencyPercent: number;
+  finalPaymentAmount: number;
+  unscheduledPercent: number;
+  unscheduledVal: number;
+  noShowPercent: number;
+  noShowVal: number;
+  clinicalPercent: number;
+  clinicalVal: number;
+  additionalPercent: number;
+  additionalVal: number;
+  scheduledHours: number;
+  workHoursPercent: number;
+  workHoursQty: number;
+  additionalHours: number;
+  intakeAdults: number;
+  followUpAdults: number;
+  intakeYouth: number;
+  followUpYouth: number;
+  intakeChild: number;
+  followUpChild: number;
 }
 
 const ClinicalStaffMetrics: React.FC = () => {
@@ -41,6 +63,7 @@ const ClinicalStaffMetrics: React.FC = () => {
   
   const [selectedMonth, setSelectedMonth] = useState(currentPeriod.month);
   const [selectedYear, setSelectedYear] = useState(currentPeriod.year);
+  const [selectedStaff, setSelectedStaff] = useState<string>("all");
 
   // Real data calculation using actual Supabase data
   const staffMetrics = useMemo(() => {
@@ -57,7 +80,7 @@ const ClinicalStaffMetrics: React.FC = () => {
       // Get staff rates (use the most recent rate)
       const staffRate = clinicalStaffRates
         .filter(r => r.staffId === staff.id)
-        .sort((a, b) => new Date(b.effectiveDate).getTime() - new Date(a.effectiveDate).getTime())[0];
+        .sort((a, b) => new Date(b.effective_date).getTime() - new Date(a.effective_date).getTime())[0];
 
       // Get admin/training hours for this staff member
       const adminTraining = adminTrainingHours.find(
@@ -95,42 +118,69 @@ const ClinicalStaffMetrics: React.FC = () => {
       let trainingCost = 0;
 
       if (staffRate) {
-        // Calculate clinical cost based on session types
+        // Calculate clinical cost based on session types and age groups
         staffSessions.forEach(session => {
           if (session.showStatus === "Show") {
             const sessionHours = session.count * (session.duration / 60);
-            if (session.meetingType === "Intake") {
-              clinicalCost += sessionHours * (staffRate.intakeSessionRate || 0);
-            } else {
-              clinicalCost += sessionHours * (staffRate.followUpSessionRate || 0);
+            if (session.serviceAgeGroup === "Adult") {
+              if (session.meetingType === "Intake") {
+                clinicalCost += sessionHours * (staffRate.adult_intake_rate || staffRate.intake_session_rate || 0);
+              } else {
+                clinicalCost += sessionHours * (staffRate.adult_follow_up_rate || staffRate.follow_up_session_rate || 0);
+              }
+            } else if (session.serviceAgeGroup === "Child") {
+              if (session.meetingType === "Intake") {
+                clinicalCost += sessionHours * (staffRate.child_intake_rate || staffRate.intake_session_rate || 0);
+              } else {
+                clinicalCost += sessionHours * (staffRate.child_follow_up_rate || staffRate.follow_up_session_rate || 0);
+              }
             }
           } else if (session.showStatus === "NoShow") {
             const sessionHours = session.count * (session.duration / 60);
-            if (session.meetingType === "Intake") {
-              noShowCost += sessionHours * (staffRate.noShowIntakeRate || 0);
-            } else {
-              noShowCost += sessionHours * (staffRate.noShowFollowUpRate || 0);
+            if (session.serviceAgeGroup === "Adult") {
+              if (session.meetingType === "Intake") {
+                noShowCost += sessionHours * (staffRate.adult_no_show_intake_rate || staffRate.no_show_intake_rate || 0);
+              } else {
+                noShowCost += sessionHours * (staffRate.adult_no_show_follow_up_rate || staffRate.no_show_follow_up_rate || 0);
+              }
+            } else if (session.serviceAgeGroup === "Child") {
+              if (session.meetingType === "Intake") {
+                noShowCost += sessionHours * (staffRate.child_no_show_intake_rate || staffRate.no_show_intake_rate || 0);
+              } else {
+                noShowCost += sessionHours * (staffRate.child_no_show_follow_up_rate || staffRate.no_show_follow_up_rate || 0);
+              }
             }
           }
         });
 
         // Calculate admin and training costs
-        adminCost = adminHours * (staffRate.adminRate || 0);
-        trainingCost = trainingHours * (staffRate.trainingRate || 0);
+        adminCost = adminHours * (staffRate.admin_rate || 0);
+        trainingCost = trainingHours * (staffRate.training_rate || 0);
       }
 
       // Calculate idle cost (using admin rate as baseline for idle time)
-      const idleCost = idleHours * (staffRate?.adminRate || 0) * 0.3; // 30% of admin rate for idle time
+      const idleCost = idleHours * (staffRate?.admin_rate || 0) * 0.3; // 30% of admin rate for idle time
 
       // Calculate overtime (hours over 40)
       const overtimeHours = Math.max(0, totalProductiveHours - 40);
-      const otCost = overtimeHours * (staffRate?.adminRate || 0) * 1.5; // 1.5x rate for overtime
+      const otCost = overtimeHours * (staffRate?.admin_rate || 0) * 1.5; // 1.5x rate for overtime
 
       // Calculate cost per clinical hour
       const costPerClinicalHour = clinicalHours > 0 ? clinicalCost / clinicalHours : 0;
 
       // Calculate utilization percentage
       const utilizationPercent = totalProductiveHours > 0 ? (totalProductiveHours / 40) * 100 : 0;
+
+      // Calculate session counts by type and age group
+      const intakeAdults = staffSessions.filter(s => s.meetingType === "Intake" && s.serviceAgeGroup === "Adult" && s.showStatus === "Show").reduce((sum, s) => sum + s.count, 0);
+      const followUpAdults = staffSessions.filter(s => s.meetingType === "FollowUp" && s.serviceAgeGroup === "Adult" && s.showStatus === "Show").reduce((sum, s) => sum + s.count, 0);
+      const intakeChild = staffSessions.filter(s => s.meetingType === "Intake" && s.serviceAgeGroup === "Child" && s.showStatus === "Show").reduce((sum, s) => sum + s.count, 0);
+      const followUpChild = staffSessions.filter(s => s.meetingType === "FollowUp" && s.serviceAgeGroup === "Child" && s.showStatus === "Show").reduce((sum, s) => sum + s.count, 0);
+
+      // Calculate new metrics for restructured table
+      const totalCost = clinicalCost + noShowCost + idleCost + otCost;
+      const scheduledHours = clinicalHours + noShowHours;
+      const paymentEfficiencyPercent = totalCost > 0 ? (clinicalCost / totalCost) * 100 : 0;
 
       return {
         staffName: staff.name,
@@ -144,9 +194,62 @@ const ClinicalStaffMetrics: React.FC = () => {
         costPerClinicalHour,
         utilizationPercent: Math.min(100, utilizationPercent),
         role: staff.role,
+        // New fields
+        paymentEfficiencyPercent,
+        finalPaymentAmount: totalCost,
+        unscheduledPercent: scheduledHours > 0 ? (idleHours / (scheduledHours + idleHours)) * 100 : 0,
+        unscheduledVal: idleCost,
+        noShowPercent: scheduledHours > 0 ? (noShowHours / scheduledHours) * 100 : 0,
+        noShowVal: noShowCost,
+        clinicalPercent: scheduledHours > 0 ? (clinicalHours / scheduledHours) * 100 : 0,
+        clinicalVal: clinicalCost,
+        additionalPercent: totalProductiveHours > 0 ? ((adminHours + trainingHours) / totalProductiveHours) * 100 : 0,
+        additionalVal: adminCost + trainingCost,
+        scheduledHours,
+        workHoursPercent: utilizationPercent,
+        workHoursQty: totalProductiveHours,
+        additionalHours: adminHours + trainingHours,
+        intakeAdults,
+        followUpAdults,
+        intakeYouth: 0, // Placeholder for youth data
+        followUpYouth: 0, // Placeholder for youth data
+        intakeChild,
+        followUpChild,
       };
     });
   }, [staffMembers, clinicalSessions, clinicalStaffRates, adminTrainingHours, selectedMonth, selectedYear]);
+
+  // Get selected staff data or totals
+  const selectedStaffData = useMemo(() => {
+    if (selectedStaff === "all") {
+      // Calculate totals
+      return {
+        staffName: "Total",
+        paymentEfficiencyPercent: staffMetrics.length > 0 ? staffMetrics.reduce((sum, s) => sum + s.paymentEfficiencyPercent, 0) / staffMetrics.length : 0,
+        finalPaymentAmount: staffMetrics.reduce((sum, s) => sum + s.finalPaymentAmount, 0),
+        unscheduledPercent: staffMetrics.length > 0 ? staffMetrics.reduce((sum, s) => sum + s.unscheduledPercent, 0) / staffMetrics.length : 0,
+        unscheduledVal: staffMetrics.reduce((sum, s) => sum + s.unscheduledVal, 0),
+        noShowPercent: staffMetrics.length > 0 ? staffMetrics.reduce((sum, s) => sum + s.noShowPercent, 0) / staffMetrics.length : 0,
+        noShowVal: staffMetrics.reduce((sum, s) => sum + s.noShowVal, 0),
+        clinicalPercent: staffMetrics.length > 0 ? staffMetrics.reduce((sum, s) => sum + s.clinicalPercent, 0) / staffMetrics.length : 0,
+        clinicalVal: staffMetrics.reduce((sum, s) => sum + s.clinicalVal, 0),
+        additionalPercent: staffMetrics.length > 0 ? staffMetrics.reduce((sum, s) => sum + s.additionalPercent, 0) / staffMetrics.length : 0,
+        additionalVal: staffMetrics.reduce((sum, s) => sum + s.additionalVal, 0),
+        scheduledHours: staffMetrics.reduce((sum, s) => sum + s.scheduledHours, 0),
+        workHoursPercent: staffMetrics.length > 0 ? staffMetrics.reduce((sum, s) => sum + s.workHoursPercent, 0) / staffMetrics.length : 0,
+        workHoursQty: staffMetrics.reduce((sum, s) => sum + s.workHoursQty, 0),
+        additionalHours: staffMetrics.reduce((sum, s) => sum + s.additionalHours, 0),
+        intakeAdults: staffMetrics.reduce((sum, s) => sum + s.intakeAdults, 0),
+        followUpAdults: staffMetrics.reduce((sum, s) => sum + s.followUpAdults, 0),
+        intakeYouth: staffMetrics.reduce((sum, s) => sum + s.intakeYouth, 0),
+        followUpYouth: staffMetrics.reduce((sum, s) => sum + s.followUpYouth, 0),
+        intakeChild: staffMetrics.reduce((sum, s) => sum + s.intakeChild, 0),
+        followUpChild: staffMetrics.reduce((sum, s) => sum + s.followUpChild, 0),
+      };
+    } else {
+      return staffMetrics.find(s => s.staffName === selectedStaff) || staffMetrics[0];
+    }
+  }, [staffMetrics, selectedStaff]);
 
   // Calculate KPIs
   const totalClinicalCost = staffMetrics.reduce((sum, s) => sum + s.clinicalCost, 0);
@@ -391,51 +494,270 @@ const ClinicalStaffMetrics: React.FC = () => {
         </CardContent>
       </Card>
 
-      {/* Staff Performance Table */}
+      {/* Restructured Staff Performance Dashboard */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Users className="h-5 w-5" />
-            Staff Performance Summary
+            Staff Performance Dashboard
           </CardTitle>
+          <div className="flex items-center gap-2 mt-4">
+            <label className="text-sm font-medium">Select Clinician:</label>
+            <Select value={selectedStaff} onValueChange={setSelectedStaff}>
+              <SelectTrigger className="w-[200px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Staff (Total)</SelectItem>
+                {staffMetrics.map((staff) => (
+                  <SelectItem key={staff.staffName} value={staff.staffName}>
+                    {staff.staffName}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         </CardHeader>
         <CardContent>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b">
-                  <th className="text-left p-2">Staff Member</th>
-                  <th className="text-left p-2">Role</th>
-                  <th className="text-right p-2">Clinical Hours</th>
-                  <th className="text-right p-2">Utilization %</th>
-                  <th className="text-right p-2">Cost/Hour</th>
-                  <th className="text-right p-2">Total Cost</th>
-                </tr>
-              </thead>
-              <tbody>
-                {staffMetrics.map((staff, index) => (
-                  <tr key={index} className="border-b">
-                    <td className="p-2 font-medium">{staff.staffName}</td>
-                    <td className="p-2">
-                      <Badge variant={staff.role === 'Psychiatrist' ? 'default' : 'secondary'}>
-                        {staff.role}
-                      </Badge>
-                    </td>
-                    <td className="text-right p-2">{staff.clinicalHours.toFixed(1)}</td>
-                    <td className="text-right p-2">
-                      <span className={staff.utilizationPercent >= 75 ? 'text-green-600' : 'text-red-600'}>
-                        {staff.utilizationPercent.toFixed(1)}%
-                      </span>
-                    </td>
-                    <td className="text-right p-2">${staff.costPerClinicalHour.toFixed(0)}</td>
-                    <td className="text-right p-2 font-medium">
-                      ${(staff.clinicalCost + staff.noShowCost + staff.idleCost + staff.otCost).toLocaleString()}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <Tabs defaultValue="payment-summary" className="w-full">
+            <TabsList className="grid w-full grid-cols-5">
+              <TabsTrigger value="payment-summary" className="bg-green-800 text-white data-[state=active]:bg-green-900">
+                Payment Summary
+              </TabsTrigger>
+              <TabsTrigger value="payment-details" className="bg-green-400 text-white data-[state=active]:bg-green-500">
+                Payment Details
+              </TabsTrigger>
+              <TabsTrigger value="treatment-rates" className="bg-cyan-400 text-white data-[state=active]:bg-cyan-500">
+                Treatment Rates
+              </TabsTrigger>
+              <TabsTrigger value="session-counts" className="bg-blue-400 text-white data-[state=active]:bg-blue-500">
+                Session Counts
+              </TabsTrigger>
+              <TabsTrigger value="hours-utilization" className="bg-pink-300 text-white data-[state=active]:bg-pink-400">
+                Hours & Utilization
+              </TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="payment-summary" className="mt-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <Card className="bg-green-50">
+                  <CardHeader>
+                    <CardTitle className="text-lg">Payment Efficiency %</CardTitle>
+                    <p className="text-sm text-muted-foreground">Percentage of productive payments</p>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-3xl font-bold text-green-700">
+                      {selectedStaffData?.paymentEfficiencyPercent?.toFixed(1)}%
+                    </div>
+                  </CardContent>
+                </Card>
+                <Card className="bg-green-50">
+                  <CardHeader>
+                    <CardTitle className="text-lg">Final Payment Amount</CardTitle>
+                    <p className="text-sm text-muted-foreground">Total compensation amount</p>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-3xl font-bold text-green-700">
+                      ${selectedStaffData?.finalPaymentAmount?.toLocaleString()}
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            </TabsContent>
+
+            <TabsContent value="payment-details" className="mt-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <Card className="bg-green-100">
+                  <CardHeader>
+                    <CardTitle className="text-sm">Unscheduled % / Val</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-xl font-bold">{selectedStaffData?.unscheduledPercent?.toFixed(1)}%</div>
+                    <div className="text-sm text-muted-foreground">${selectedStaffData?.unscheduledVal?.toLocaleString()}</div>
+                  </CardContent>
+                </Card>
+                <Card className="bg-green-100">
+                  <CardHeader>
+                    <CardTitle className="text-sm">NoShow % / Val</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-xl font-bold">{selectedStaffData?.noShowPercent?.toFixed(1)}%</div>
+                    <div className="text-sm text-muted-foreground">${selectedStaffData?.noShowVal?.toLocaleString()}</div>
+                  </CardContent>
+                </Card>
+                <Card className="bg-green-100">
+                  <CardHeader>
+                    <CardTitle className="text-sm">Clinical % / Val</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-xl font-bold">{selectedStaffData?.clinicalPercent?.toFixed(1)}%</div>
+                    <div className="text-sm text-muted-foreground">${selectedStaffData?.clinicalVal?.toLocaleString()}</div>
+                  </CardContent>
+                </Card>
+                <Card className="bg-green-100">
+                  <CardHeader>
+                    <CardTitle className="text-sm">Additional % / Val</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-xl font-bold">{selectedStaffData?.additionalPercent?.toFixed(1)}%</div>
+                    <div className="text-sm text-muted-foreground">${selectedStaffData?.additionalVal?.toLocaleString()}</div>
+                  </CardContent>
+                </Card>
+              </div>
+            </TabsContent>
+
+            <TabsContent value="treatment-rates" className="mt-6">
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                {/* Treatment rates would come from the rates table */}
+                <Card className="bg-cyan-50">
+                  <CardHeader>
+                    <CardTitle className="text-sm">Additional_H</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-xl font-bold">{selectedStaffData?.additionalHours?.toFixed(1)}</div>
+                  </CardContent>
+                </Card>
+                <Card className="bg-cyan-50">
+                  <CardHeader>
+                    <CardTitle className="text-sm">Intake Adult</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-xl font-bold">{selectedStaffData?.intakeAdults}</div>
+                  </CardContent>
+                </Card>
+                <Card className="bg-cyan-50">
+                  <CardHeader>
+                    <CardTitle className="text-sm">Follow up Adult</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-xl font-bold">{selectedStaffData?.followUpAdults}</div>
+                  </CardContent>
+                </Card>
+                <Card className="bg-cyan-50">
+                  <CardHeader>
+                    <CardTitle className="text-sm">Intake Child</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-xl font-bold">{selectedStaffData?.intakeChild}</div>
+                  </CardContent>
+                </Card>
+                <Card className="bg-cyan-50">
+                  <CardHeader>
+                    <CardTitle className="text-sm">Follow up Child</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-xl font-bold">{selectedStaffData?.followUpChild}</div>
+                  </CardContent>
+                </Card>
+                <Card className="bg-cyan-50">
+                  <CardHeader>
+                    <CardTitle className="text-sm">Follow up Youth</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-xl font-bold">{selectedStaffData?.followUpYouth}</div>
+                  </CardContent>
+                </Card>
+              </div>
+            </TabsContent>
+
+            <TabsContent value="session-counts" className="mt-6">
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                <Card className="bg-blue-50">
+                  <CardHeader>
+                    <CardTitle className="text-sm">Intakes Adults</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-xl font-bold">{selectedStaffData?.intakeAdults}</div>
+                  </CardContent>
+                </Card>
+                <Card className="bg-blue-50">
+                  <CardHeader>
+                    <CardTitle className="text-sm">Follow ups Adult</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-xl font-bold">{selectedStaffData?.followUpAdults}</div>
+                  </CardContent>
+                </Card>
+                <Card className="bg-blue-50">
+                  <CardHeader>
+                    <CardTitle className="text-sm">Intake Youth</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-xl font-bold">{selectedStaffData?.intakeYouth}</div>
+                  </CardContent>
+                </Card>
+                <Card className="bg-blue-50">
+                  <CardHeader>
+                    <CardTitle className="text-sm">Follow up Youth</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-xl font-bold">{selectedStaffData?.followUpYouth}</div>
+                  </CardContent>
+                </Card>
+                <Card className="bg-blue-50">
+                  <CardHeader>
+                    <CardTitle className="text-sm">Additional Hours</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-xl font-bold">{selectedStaffData?.additionalHours?.toFixed(1)}</div>
+                  </CardContent>
+                </Card>
+              </div>
+            </TabsContent>
+
+            <TabsContent value="hours-utilization" className="mt-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <Card className="bg-pink-50">
+                  <CardHeader>
+                    <CardTitle className="text-sm">Scheduled Hours</CardTitle>
+                    <p className="text-xs text-muted-foreground">Available hours</p>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-xl font-bold">{selectedStaffData?.scheduledHours?.toFixed(1)}</div>
+                  </CardContent>
+                </Card>
+                <Card className="bg-pink-50">
+                  <CardHeader>
+                    <CardTitle className="text-sm">Utilization % / Qty</CardTitle>
+                    <p className="text-xs text-muted-foreground">Usage efficiency</p>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-xl font-bold">{selectedStaffData?.workHoursPercent?.toFixed(1)}%</div>
+                    <div className="text-sm text-muted-foreground">{selectedStaffData?.workHoursQty?.toFixed(1)} hrs</div>
+                  </CardContent>
+                </Card>
+                <Card className="bg-pink-50">
+                  <CardHeader>
+                    <CardTitle className="text-sm">Work Hours % / Qty</CardTitle>
+                    <p className="text-xs text-muted-foreground">Actual work</p>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-xl font-bold">{selectedStaffData?.workHoursPercent?.toFixed(1)}%</div>
+                    <div className="text-sm text-muted-foreground">{selectedStaffData?.workHoursQty?.toFixed(1)} hrs</div>
+                  </CardContent>
+                </Card>
+                <Card className="bg-pink-50">
+                  <CardHeader>
+                    <CardTitle className="text-sm">No-Show % / Qty</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-xl font-bold">{selectedStaffData?.noShowPercent?.toFixed(1)}%</div>
+                    <div className="text-sm text-muted-foreground">{selectedStaffData?.noShowVal?.toLocaleString()}</div>
+                  </CardContent>
+                </Card>
+                <Card className="bg-pink-50">
+                  <CardHeader>
+                    <CardTitle className="text-sm">Unused Time % / Qty</CardTitle>
+                    <p className="text-xs text-muted-foreground">General unused time</p>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-xl font-bold">{selectedStaffData?.unscheduledPercent?.toFixed(1)}%</div>
+                    <div className="text-sm text-muted-foreground">{selectedStaffData?.unscheduledVal?.toLocaleString()}</div>
+                  </CardContent>
+                </Card>
+              </div>
+            </TabsContent>
+          </Tabs>
         </CardContent>
       </Card>
     </div>
