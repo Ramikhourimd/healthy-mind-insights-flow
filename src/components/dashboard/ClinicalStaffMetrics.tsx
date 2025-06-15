@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -139,15 +138,15 @@ const ClinicalStaffMetrics: React.FC = () => {
             const sessionHours = session.count * (session.duration / 60);
             if (session.serviceAgeGroup === "Adult") {
               if (session.meetingType === "Intake") {
-                noShowCost += sessionHours * (staffRate.adult_no_show_intake_rate || staffRate.no_show_intake_rate || 0);
+                noShowCost += sessionHours * (staffRate.adult_no_show_intake_rate || 0);
               } else {
-                noShowCost += sessionHours * (staffRate.adult_no_show_follow_up_rate || staffRate.no_show_follow_up_rate || 0);
+                noShowCost += sessionHours * (staffRate.adult_no_show_follow_up_rate || 0);
               }
             } else if (session.serviceAgeGroup === "Child") {
               if (session.meetingType === "Intake") {
-                noShowCost += sessionHours * (staffRate.child_no_show_intake_rate || staffRate.no_show_intake_rate || 0);
+                noShowCost += sessionHours * (staffRate.child_no_show_intake_rate || 0);
               } else {
-                noShowCost += sessionHours * (staffRate.child_no_show_follow_up_rate || staffRate.no_show_follow_up_rate || 0);
+                noShowCost += sessionHours * (staffRate.child_no_show_follow_up_rate || 0);
               }
             }
           }
@@ -608,7 +607,6 @@ const ClinicalStaffMetrics: React.FC = () => {
 
             <TabsContent value="treatment-rates" className="mt-6">
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                {/* Treatment rates would come from the rates table */}
                 <Card className="bg-cyan-50">
                   <CardHeader>
                     <CardTitle className="text-sm">Additional_H</CardTitle>
