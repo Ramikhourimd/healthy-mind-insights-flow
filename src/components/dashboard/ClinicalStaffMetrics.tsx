@@ -123,15 +123,15 @@ const ClinicalStaffMetrics: React.FC = () => {
             const sessionHours = session.count * (session.duration / 60);
             if (session.serviceAgeGroup === "Adult") {
               if (session.meetingType === "Intake") {
-                clinicalCost += sessionHours * (staffRate.adult_intake_rate || staffRate.intake_session_rate || 0);
+                clinicalCost += sessionHours * (staffRate.adult_intake_rate || 0);
               } else {
-                clinicalCost += sessionHours * (staffRate.adult_follow_up_rate || staffRate.follow_up_session_rate || 0);
+                clinicalCost += sessionHours * (staffRate.adult_follow_up_rate || 0);
               }
             } else if (session.serviceAgeGroup === "Child") {
               if (session.meetingType === "Intake") {
-                clinicalCost += sessionHours * (staffRate.child_intake_rate || staffRate.intake_session_rate || 0);
+                clinicalCost += sessionHours * (staffRate.child_intake_rate || 0);
               } else {
-                clinicalCost += sessionHours * (staffRate.child_follow_up_rate || staffRate.follow_up_session_rate || 0);
+                clinicalCost += sessionHours * (staffRate.child_follow_up_rate || 0);
               }
             }
           } else if (session.showStatus === "NoShow") {
