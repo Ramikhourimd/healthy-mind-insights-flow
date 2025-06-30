@@ -151,46 +151,64 @@ const StaffPage: React.FC = () => {
   // Handle rates form submission
   const handleRatesSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Validation to ensure staffId is properly set
+    if (!currentRates.staffId || currentRates.staffId.includes('default-')) {
+      toast({
+        title: "Error",
+        description: "Please select a valid staff member.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    console.log("Submitting rates for staff:", currentRates.staffId);
+    console.log("Current rates data:", currentRates);
+
     try {
+      const ratesData = {
+        staffId: currentRates.staffId,
+        adult_intake_rate: Number(currentRates.adult_intake_rate) || 0,
+        adult_follow_up_rate: Number(currentRates.adult_follow_up_rate) || 0,
+        adult_no_show_intake_rate: Number(currentRates.adult_no_show_intake_rate) || 0,
+        adult_no_show_follow_up_rate: Number(currentRates.adult_no_show_follow_up_rate) || 0,
+        child_intake_rate: Number(currentRates.child_intake_rate) || 0,
+        child_follow_up_rate: Number(currentRates.child_follow_up_rate) || 0,
+        child_no_show_intake_rate: Number(currentRates.child_no_show_intake_rate) || 0,
+        child_no_show_follow_up_rate: Number(currentRates.child_no_show_follow_up_rate) || 0,
+        availability_retainer_rate: Number(currentRates.availability_retainer_rate) || 0,
+        admin_rate: Number(currentRates.admin_rate) || 0,
+        training_rate: Number(currentRates.training_rate) || 0,
+        contract_type_identifier: currentRates.contract_type_identifier || "",
+        effective_date: currentRates.effective_date,
+      };
+
       if (isRatesEditing && currentRates.id) {
+        console.log("Updating existing rates with ID:", currentRates.id);
         await updateStaffRates({
           id: currentRates.id,
-          staffId: currentRates.staffId,
-          adult_intake_rate: currentRates.adult_intake_rate,
-          adult_follow_up_rate: currentRates.adult_follow_up_rate,
-          adult_no_show_intake_rate: currentRates.adult_no_show_intake_rate,
-          adult_no_show_follow_up_rate: currentRates.adult_no_show_follow_up_rate,
-          child_intake_rate: currentRates.child_intake_rate,
-          child_follow_up_rate: currentRates.child_follow_up_rate,
-          child_no_show_intake_rate: currentRates.child_no_show_intake_rate,
-          child_no_show_follow_up_rate: currentRates.child_no_show_follow_up_rate,
-          availability_retainer_rate: currentRates.availability_retainer_rate,
-          admin_rate: currentRates.admin_rate,
-          training_rate: currentRates.training_rate,
-          contract_type_identifier: currentRates.contract_type_identifier,
-          effective_date: currentRates.effective_date,
+          ...ratesData
+        });
+        toast({
+          title: "Success",
+          description: "Staff rates updated successfully.",
         });
       } else {
-        await addStaffRates({
-          staffId: currentRates.staffId,
-          adult_intake_rate: currentRates.adult_intake_rate,
-          adult_follow_up_rate: currentRates.adult_follow_up_rate,
-          adult_no_show_intake_rate: currentRates.adult_no_show_intake_rate,
-          adult_no_show_follow_up_rate: currentRates.adult_no_show_follow_up_rate,
-          child_intake_rate: currentRates.child_intake_rate,
-          child_follow_up_rate: currentRates.child_follow_up_rate,
-          child_no_show_intake_rate: currentRates.child_no_show_intake_rate,
-          child_no_show_follow_up_rate: currentRates.child_no_show_follow_up_rate,
-          availability_retainer_rate: currentRates.availability_retainer_rate,
-          admin_rate: currentRates.admin_rate,
-          training_rate: currentRates.training_rate,
-          contract_type_identifier: currentRates.contract_type_identifier,
-          effective_date: currentRates.effective_date,
+        console.log("Adding new rates");
+        await addStaffRates(ratesData);
+        toast({
+          title: "Success", 
+          description: "Staff rates added successfully.",
         });
       }
       handleCloseRatesDialog();
     } catch (error) {
       console.error("Error with rates operation:", error);
+      toast({
+        title: "Error",
+        description: "Failed to save staff rates. Please try again.",
+        variant: "destructive",
+      });
     }
   };
 
@@ -203,18 +221,58 @@ const StaffPage: React.FC = () => {
 
   // Edit staff rates
   const handleEditRates = async (staffId: string) => {
-    const rates = await getStaffRates(staffId);
-    if (rates) {
-      setCurrentRates({
-        ...rates,
-        staffId: staffId,
-      });
-      setIsRatesEditing(true);
-      setIsRatesDialogOpen(true);
-    } else {
+    console.log("Editing rates for staff ID:", staffId);
+    
+    try {
+      const rates = await getStaffRates(staffId);
+      if (rates) {
+        console.log("Found existing rates:", rates);
+        setCurrentRates({
+          id: rates.id,
+          staffId: staffId,
+          adult_intake_rate: rates.adult_intake_rate || 0,
+          adult_follow_up_rate: rates.adult_follow_up_rate || 0,
+          adult_no_show_intake_rate: rates.adult_no_show_intake_rate || 0,
+          adult_no_show_follow_up_rate: rates.adult_no_show_follow_up_rate || 0,
+          child_intake_rate: rates.child_intake_rate || 0,
+          child_follow_up_rate: rates.child_follow_up_rate || 0,
+          child_no_show_intake_rate: rates.child_no_show_intake_rate || 0,
+          child_no_show_follow_up_rate: rates.child_no_show_follow_up_rate || 0,
+          availability_retainer_rate: rates.availability_retainer_rate || 0,
+          admin_rate: rates.admin_rate || 0,
+          training_rate: rates.training_rate || 0,
+          contract_type_identifier: rates.contract_type_identifier || "",
+          effective_date: rates.effective_date,
+        });
+        setIsRatesEditing(true);
+        setIsRatesDialogOpen(true);
+      } else {
+        console.log("No existing rates found, creating new");
+        // Initialize with empty rates for this staff member
+        setCurrentRates({
+          staffId: staffId,
+          adult_intake_rate: 0,
+          adult_follow_up_rate: 0,
+          adult_no_show_intake_rate: 0,
+          adult_no_show_follow_up_rate: 0,
+          child_intake_rate: 0,
+          child_follow_up_rate: 0,
+          child_no_show_intake_rate: 0,
+          child_no_show_follow_up_rate: 0,
+          availability_retainer_rate: 0,
+          admin_rate: 0,
+          training_rate: 0,
+          contract_type_identifier: "",
+          effective_date: new Date().toISOString(),
+        });
+        setIsRatesEditing(false);
+        setIsRatesDialogOpen(true);
+      }
+    } catch (error) {
+      console.error("Error loading staff rates:", error);
       toast({
-        title: "No Rates Found",
-        description: "No payment rates found for this staff member. Please add rates.",
+        title: "Error",
+        description: "Failed to load staff rates. Please try again.",
         variant: "destructive",
       });
     }
@@ -468,7 +526,11 @@ const StaffPage: React.FC = () => {
                 <Label htmlFor="staffId">Staff Member</Label>
                 <Select
                   value={currentRates.staffId}
-                  onValueChange={(value) => setCurrentRates({ ...currentRates, staffId: value })}
+                  onValueChange={(value) => {
+                    console.log("Selected staff ID:", value);
+                    setCurrentRates({ ...currentRates, staffId: value });
+                  }}
+                  disabled={isRatesEditing} // Disable staff selection when editing existing rates
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Select Staff Member" />
@@ -507,6 +569,7 @@ const StaffPage: React.FC = () => {
                       value={currentRates.adult_intake_rate}
                       onChange={handleRateChange}
                       min={0}
+                      step="0.01"
                     />
                   </div>
                   <div className="grid w-full items-center gap-2">
@@ -518,6 +581,7 @@ const StaffPage: React.FC = () => {
                       value={currentRates.adult_follow_up_rate}
                       onChange={handleRateChange}
                       min={0}
+                      step="0.01"
                     />
                   </div>
                   <div className="grid w-full items-center gap-2">
@@ -529,6 +593,7 @@ const StaffPage: React.FC = () => {
                       value={currentRates.adult_no_show_intake_rate}
                       onChange={handleRateChange}
                       min={0}
+                      step="0.01"
                     />
                   </div>
                   <div className="grid w-full items-center gap-2">
@@ -540,6 +605,7 @@ const StaffPage: React.FC = () => {
                       value={currentRates.adult_no_show_follow_up_rate}
                       onChange={handleRateChange}
                       min={0}
+                      step="0.01"
                     />
                   </div>
                 </div>
@@ -558,6 +624,7 @@ const StaffPage: React.FC = () => {
                       value={currentRates.child_intake_rate}
                       onChange={handleRateChange}
                       min={0}
+                      step="0.01"
                     />
                   </div>
                   <div className="grid w-full items-center gap-2">
@@ -569,6 +636,7 @@ const StaffPage: React.FC = () => {
                       value={currentRates.child_follow_up_rate}
                       onChange={handleRateChange}
                       min={0}
+                      step="0.01"
                     />
                   </div>
                   <div className="grid w-full items-center gap-2">
@@ -580,6 +648,7 @@ const StaffPage: React.FC = () => {
                       value={currentRates.child_no_show_intake_rate}
                       onChange={handleRateChange}
                       min={0}
+                      step="0.01"
                     />
                   </div>
                   <div className="grid w-full items-center gap-2">
@@ -591,6 +660,7 @@ const StaffPage: React.FC = () => {
                       value={currentRates.child_no_show_follow_up_rate}
                       onChange={handleRateChange}
                       min={0}
+                      step="0.01"
                     />
                   </div>
                 </div>
@@ -608,8 +678,8 @@ const StaffPage: React.FC = () => {
                       type="number"
                       value={currentRates.availability_retainer_rate}
                       onChange={handleRateChange}
-                      required
                       min={0}
+                      step="0.01"
                     />
                   </div>
                   <div className="grid w-full items-center gap-2">
@@ -620,8 +690,8 @@ const StaffPage: React.FC = () => {
                       type="number"
                       value={currentRates.admin_rate}
                       onChange={handleRateChange}
-                      required
                       min={0}
+                      step="0.01"
                     />
                   </div>
                   <div className="grid w-full items-center gap-2">
@@ -632,8 +702,8 @@ const StaffPage: React.FC = () => {
                       type="number"
                       value={currentRates.training_rate}
                       onChange={handleRateChange}
-                      required
                       min={0}
+                      step="0.01"
                     />
                   </div>
                   <div className="grid w-full items-center gap-2">
@@ -660,12 +730,9 @@ const StaffPage: React.FC = () => {
                           mode="single"
                           selected={currentRates.effective_date ? new Date(currentRates.effective_date) : undefined}
                           onSelect={(date) => {
-                            const selectedDate = date ? format(date, "yyyy-MM-dd") : undefined;
+                            const selectedDate = date ? date.toISOString() : new Date().toISOString();
                             setCurrentRates({ ...currentRates, effective_date: selectedDate });
                           }}
-                          disabled={(date) =>
-                            date > new Date()
-                          }
                           initialFocus
                         />
                       </PopoverContent>
@@ -678,7 +745,7 @@ const StaffPage: React.FC = () => {
               <Button type="button" variant="outline" onClick={handleCloseRatesDialog}>
                 Cancel
               </Button>
-              <Button type="submit">
+              <Button type="submit" disabled={isLoading}>
                 {isRatesEditing ? "Update" : "Add"}
               </Button>
             </DialogFooter>

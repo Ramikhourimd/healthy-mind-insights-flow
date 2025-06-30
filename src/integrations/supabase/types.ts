@@ -868,6 +868,84 @@ export type Database = {
         }
         Relationships: []
       }
+      webinar_registrations: {
+        Row: {
+          agree_to_marketing: boolean
+          agree_to_terms: boolean
+          created_at: string
+          email: string
+          experience: string | null
+          id: string
+          interests: string | null
+          name: string
+          phone: string | null
+          profession: string
+        }
+        Insert: {
+          agree_to_marketing?: boolean
+          agree_to_terms?: boolean
+          created_at?: string
+          email: string
+          experience?: string | null
+          id?: string
+          interests?: string | null
+          name: string
+          phone?: string | null
+          profession: string
+        }
+        Update: {
+          agree_to_marketing?: boolean
+          agree_to_terms?: boolean
+          created_at?: string
+          email?: string
+          experience?: string | null
+          id?: string
+          interests?: string | null
+          name?: string
+          phone?: string | null
+          profession?: string
+        }
+        Relationships: []
+      }
+      webinar_registrations_duplicate: {
+        Row: {
+          agree_to_marketing: boolean
+          agree_to_terms: boolean
+          created_at: string
+          email: string
+          experience: string | null
+          id: string
+          interests: string | null
+          name: string
+          phone: string | null
+          profession: string
+        }
+        Insert: {
+          agree_to_marketing?: boolean
+          agree_to_terms?: boolean
+          created_at?: string
+          email: string
+          experience?: string | null
+          id?: string
+          interests?: string | null
+          name: string
+          phone?: string | null
+          profession: string
+        }
+        Update: {
+          agree_to_marketing?: boolean
+          agree_to_terms?: boolean
+          created_at?: string
+          email?: string
+          experience?: string | null
+          id?: string
+          interests?: string | null
+          name?: string
+          phone?: string | null
+          profession?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
