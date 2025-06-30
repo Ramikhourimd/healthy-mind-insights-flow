@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -153,7 +154,7 @@ const StaffPage: React.FC = () => {
     e.preventDefault();
     
     // Validation to ensure staffId is properly set
-    if (!currentRates.staffId || currentRates.staffId.includes('default-')) {
+    if (!currentRates.staffId) {
       toast({
         title: "Error",
         description: "Please select a valid staff member.",
@@ -164,6 +165,8 @@ const StaffPage: React.FC = () => {
 
     console.log("Submitting rates for staff:", currentRates.staffId);
     console.log("Current rates data:", currentRates);
+    console.log("Is editing:", isRatesEditing);
+    console.log("Current rates ID:", currentRates.id);
 
     try {
       const ratesData = {
@@ -183,7 +186,10 @@ const StaffPage: React.FC = () => {
         effective_date: currentRates.effective_date,
       };
 
-      if (isRatesEditing && currentRates.id) {
+      // Check if we have a valid existing ID (not a default one)
+      const hasValidId = currentRates.id && !currentRates.id.startsWith('default-');
+      
+      if (isRatesEditing && hasValidId) {
         console.log("Updating existing rates with ID:", currentRates.id);
         await updateStaffRates({
           id: currentRates.id,
@@ -225,7 +231,7 @@ const StaffPage: React.FC = () => {
     
     try {
       const rates = await getStaffRates(staffId);
-      if (rates) {
+      if (rates && rates.id && !rates.id.startsWith('default-')) {
         console.log("Found existing rates:", rates);
         setCurrentRates({
           id: rates.id,
@@ -245,7 +251,6 @@ const StaffPage: React.FC = () => {
           effective_date: rates.effective_date,
         });
         setIsRatesEditing(true);
-        setIsRatesDialogOpen(true);
       } else {
         console.log("No existing rates found, creating new");
         // Initialize with empty rates for this staff member
@@ -266,8 +271,8 @@ const StaffPage: React.FC = () => {
           effective_date: new Date().toISOString(),
         });
         setIsRatesEditing(false);
-        setIsRatesDialogOpen(true);
       }
+      setIsRatesDialogOpen(true);
     } catch (error) {
       console.error("Error loading staff rates:", error);
       toast({
