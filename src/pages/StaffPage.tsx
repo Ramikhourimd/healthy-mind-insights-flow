@@ -34,7 +34,7 @@ const StaffPage: React.FC = () => {
     handleRatesSubmit,
     handleEditRates,
     handleCloseRatesDialog,
-    handleStaffChange,
+    handleStaffChange: handleRatesStaffChange,
     handleEffectiveDateChange,
   } = useRatesManagement();
 
@@ -82,7 +82,7 @@ const StaffPage: React.FC = () => {
         currentRates={currentRates}
         staffMembers={staffMembers}
         onRateChange={handleRateChange}
-        onStaffChange={handleStaffChange}
+        onStaffChange={handleRatesStaffChange}
         onEffectiveDateChange={handleEffectiveDateChange}
         isLoading={isLoading}
       />
