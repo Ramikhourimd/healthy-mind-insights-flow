@@ -47,6 +47,7 @@ export const AdminStaffTab: React.FC<AdminStaffTabProps> = ({
                 <TableHead>Role</TableHead>
                 <TableHead className="text-right">Base Salary</TableHead>
                 <TableHead className="text-right">Commission</TableHead>
+                <TableHead className="text-right">Bonus</TableHead>
                 <TableHead className="text-right">Total</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
@@ -58,7 +59,8 @@ export const AdminStaffTab: React.FC<AdminStaffTabProps> = ({
                   <TableCell>{staff.role}</TableCell>
                   <TableCell className="text-right">{formatCurrency(Number(staff.baseSalary) || 0)}</TableCell>
                   <TableCell className="text-right">{formatCurrency(Number(staff.commission) || 0)}</TableCell>
-                  <TableCell className="text-right">{formatCurrency((Number(staff.baseSalary) || 0) + (Number(staff.commission) || 0))}</TableCell>
+                  <TableCell className="text-right">{formatCurrency(Number(staff.bonus) || 0)}</TableCell>
+                  <TableCell className="text-right">{formatCurrency((Number(staff.baseSalary) || 0) + (Number(staff.commission) || 0) + (Number(staff.bonus) || 0))}</TableCell>
                   <TableCell className="text-right">
                     <div className="flex justify-end gap-2">
                       <Button variant="ghost" size="icon" onClick={() => onEdit(staff)}>
@@ -72,7 +74,7 @@ export const AdminStaffTab: React.FC<AdminStaffTabProps> = ({
                 </TableRow>
               ))}
               <TableRow>
-                <TableCell colSpan={4} className="font-bold">Total Administrative Staff Costs</TableCell>
+                <TableCell colSpan={5} className="font-bold">Total Administrative Staff Costs</TableCell>
                 <TableCell className="text-right font-bold">
                   {formatCurrency(calculations.totalAdminCosts)}
                 </TableCell>
