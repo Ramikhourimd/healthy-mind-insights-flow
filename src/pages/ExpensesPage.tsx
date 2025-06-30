@@ -214,16 +214,16 @@ const ExpensesPage: React.FC = () => {
       }
     });
     
-    // Calculate total admin costs including bonus
+    // Calculate total admin costs without bonus
     const totalAdminCosts = filteredData.filteredAdminStaff.reduce((total, staff) => {
-      return total + (Number(staff.baseSalary) || 0) + (Number(staff.commission) || 0) + (Number(staff.bonus) || 0);
+      return total + (Number(staff.baseSalary) || 0) + (Number(staff.commission) || 0);
     }, 0);
     
     console.log('=== CALCULATION RESULTS ===');
     console.log('Clinical breakdown calculated:', clinicalBreakdown);
     console.log('Total calculated clinical costs:', totalCalculatedClinicalCosts);
     console.log('Total admin/training costs:', totalAdminTrainingCosts);
-    console.log('Total admin costs (including bonus):', totalAdminCosts);
+    console.log('Total admin costs (without bonus):', totalAdminCosts);
     console.log('Financial summary clinical costs:', financialSummary?.totalClinicalCosts);
     
     const finalCalculations = {

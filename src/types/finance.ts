@@ -82,7 +82,7 @@ export type ClinicalStaffRates = {
   contract_type_identifier?: string; // Optional: for very unique contracts
 };
 
-// Admin staff financial data - updated to match our usage
+// Admin staff financial data - reverted to original without bonus
 export type AdminStaffFinancials = {
   id: string;
   name: string;

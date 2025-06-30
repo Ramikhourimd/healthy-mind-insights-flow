@@ -26,8 +26,7 @@ export const AdminStaffDialog: React.FC<AdminStaffDialogProps> = ({
     name: "",
     role: "",
     baseSalary: 0,
-    commission: 0,
-    bonus: 0
+    commission: 0
   });
 
   useEffect(() => {
@@ -36,16 +35,14 @@ export const AdminStaffDialog: React.FC<AdminStaffDialogProps> = ({
         name: editingStaff.name,
         role: editingStaff.role,
         baseSalary: editingStaff.baseSalary,
-        commission: editingStaff.commission || 0,
-        bonus: editingStaff.bonus || 0
+        commission: editingStaff.commission || 0
       });
     } else {
       setFormData({
         name: "",
         role: "",
         baseSalary: 0,
-        commission: 0,
-        bonus: 0
+        commission: 0
       });
     }
   }, [editingStaff, isOpen]);
@@ -54,19 +51,10 @@ export const AdminStaffDialog: React.FC<AdminStaffDialogProps> = ({
     const { name, value } = e.target;
     const numericValue = name === "name" || name === "role" ? value : Number(value);
     
-    setFormData(prev => {
-      const newData = {
-        ...prev,
-        [name]: numericValue
-      };
-      
-      // Auto-calculate commission as 30% of base salary when base salary changes
-      if (name === "baseSalary" && !editingStaff) {
-        newData.commission = Math.round(numericValue * 0.3);
-      }
-      
-      return newData;
-    });
+    setFormData(prev => ({
+      ...prev,
+      [name]: numericValue
+    }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -131,24 +119,12 @@ export const AdminStaffDialog: React.FC<AdminStaffDialogProps> = ({
               />
             </div>
             <div className="grid w-full items-center gap-2">
-              <Label htmlFor="commission">Commission (ILS) - Default: 30% of Base Salary</Label>
+              <Label htmlFor="commission">Commission (ILS)</Label>
               <Input 
                 id="commission"
                 name="commission"
                 type="number"
                 value={formData.commission}
-                onChange={handleChange}
-                required
-                min={0}
-              />
-            </div>
-            <div className="grid w-full items-center gap-2">
-              <Label htmlFor="bonus">Bonus (ILS)</Label>
-              <Input 
-                id="bonus"
-                name="bonus"
-                type="number"
-                value={formData.bonus}
                 onChange={handleChange}
                 required
                 min={0}
